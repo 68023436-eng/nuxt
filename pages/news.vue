@@ -8,8 +8,8 @@
                 <div class="tw-border tw-border-[#ACBFA4] tw-bg-[#E2E8CE] tw-rounded-xl tw-p-5 tw-h-full">
                     <div class="tw-text-xl tw-font-bold">{{ item.title }}</div>
                     <div class="tw-text-sm tw-pt-2">Body: {{ item.body }}</div>
-                    <div class="tw-text-sm tw-pt-2">🪪ID: {{ item.id }}</div>
-                    <div class="tw-text-sm tw-pt-2">👤UserID: {{ item.userId }}</div>
+                    <div class="tw-text-sm tw-pt-2">📝ID: {{ item.id }}</div>
+                    <div class="tw-text-sm tw-pt-2">📩UserID: {{ item.userId }}</div>
                 </div>
             </div>
         </div>
