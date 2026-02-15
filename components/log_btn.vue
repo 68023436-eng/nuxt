@@ -1,7 +1,5 @@
 <template>
-    <div>
-        <div :class="[colorClass, 'tw-w-30 tw-p-2 tw-rounded-xl tw-text-[#262626] tw-cursor-pointer']">{{ text }}</div>
-    </div>
+    <button :class="[colorClass, 'tw-w-30 tw-p-2 tw-rounded-xl tw-text-[#262626] tw-cursor-pointer hover:tw-bg-amber-500']">{{ props.text }}</button>
 </template>
 
 <script lang="ts" setup>

@@ -8,8 +8,8 @@
                 <div>News</div>
             </div>
             <div class=" tw-flex tw-gap-2">
-                <btn />
-                <btn text="Login" colors="blue" />
+                <log_btn />
+                <common_btn text="Login" />
             </div>
         </div>
     </div>
