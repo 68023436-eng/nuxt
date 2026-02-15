@@ -3,9 +3,10 @@
         <div class=" tw-text-3xl tw-cursor-pointer">Test Vue Framework.</div>
         <div class=" tw-flex tw-items-center tw-gap-5">
             <div class=" tw-flex tw-gap-10 tw-cursor-pointer ">
-                <NuxtLink to="/About">About</NuxtLink>
                 <NuxtLink to="/">Home</NuxtLink>
-                <div>News</div>
+                <NuxtLink to="/About">About</NuxtLink>
+                <NuxtLink to="/News">News</NuxtLink>
+                <NuxtLink to="/User">User</NuxtLink>
             </div>
             <div class=" tw-flex tw-gap-2">
                 <log_btn />
