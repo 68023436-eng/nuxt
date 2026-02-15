@@ -2,7 +2,6 @@
     <navbar />
     <div class="tw-bg-gray-50 tw-pb-10">
         <div class=" tw-text-8xl tw-mt-10 tw-font-bold tw-flex tw-justify-center">News Page</div>
-
         <div class=" tw-grid tw-grid-cols-3 tw-gap-4 tw-px-20 tw-pt-10">
             <div v-for="item in posts" :key="item.id">
                 <div class="tw-border tw-border-[#ACBFA4] tw-bg-[#E2E8CE] tw-rounded-xl tw-p-5 tw-h-full">
@@ -40,6 +39,6 @@
             console.error('Error fetching posts data:', error);
         }
     }
-</script>
 
-<style></style>
+
+</script>

@@ -1,6 +1,6 @@
 <template>
     <navbar />
-    <div class=" tw-pt-40 tw-bg-gray-100 tw-h-screen">
+    <div class=" tw-pt-20 tw-bg-gray-100 tw-h-screen">
         <div class=" tw-font-bold tw-text-8xl tw-mb-10 tw-text-neutral-600 tw-flex tw-justify-center">
             Hello !!!
         </div>
@@ -17,6 +17,8 @@
 
 
 <script setup lang="ts">
+import Search from '~/components/search.vue';
+
     const name = ref <String>("Yonlawat Somjai")
     const age = ref <Number>(19)
 </script>
