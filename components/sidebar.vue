@@ -2,7 +2,7 @@
   <div class="tw-max-w-60 tw-h-auto tw-p-5 tw-shadow-2xl tw-rounded-xl tw-items-center">
     <!-- โลโก้ (แนะนำเปลี่ยน path จาก ../public/... เป็น /... ตรงๆ) -->
     <div>
-      <img src="/pic/channels4_profile.png" alt="logo" class="tw-max-h-40 tw-max-w-40" />
+      <button @click="goTo('index')"><img src="/pic/channels4_profile.png" alt="logo" class="tw-max-h-40 tw-max-w-40" /></button>
     </div>
     <!-- เมนูทั้ง 3 ปุ่ม: ผูก @click เรียกใช้ฟังก์ชัน goTo -->
     <div class="tw-grid-cols-3 tw-mt-20">
@@ -21,14 +21,14 @@
     <div class="tw-flex tw-items-center tw-max-w-auto tw-bg-slate-300 tw-p-3 tw-mt-48 tw-rounded-xl">
       <div>
         <!-- ผูกรูปโปรไฟล์จากตัวแปร userAvatar -->
-        <img :src="userAvatar" alt="avatar" class="tw-h-11 tw-w-11 tw-rounded-full object-cover" />
+        <img :src="userAvatar" alt="avatar" class="tw-h-auto tw-w-auto tw-rounded-full object-cover" />
       </div>
 
       <!-- แสดงชื่อจากตัวแปร userName -->
       <div class="tw-mx-3 font-medium">{{ userName }}</div>
 
       <!-- ปุ่มไอคอน Logout: เพิ่ม cursor-pointer และผูก @click="handleLogout" -->
-      <div @click="handleLogout" class="cursor-pointer hover:opacity-75 transition">
+      <div @click="handleLogout" class=" tw-cursor-pointer hover:opacity-75 transition">
         <svg width="40px" height="40px" viewBox="-3.36 -3.36 30.72 30.72" fill="none" xmlns="http://www.w3.org/2000/svg">
           <g id="SVGRepo_bgCarrier" stroke-width="0"/>
           <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
@@ -61,7 +61,8 @@ const goTo = (pageName) => {
   const routes = {
     appointment: '/appointments',  // หน้าใบนัด
     form: '/patient-form',         // หน้ากรอกข้อมูล
-    history: '/history'            // หน้าประวัติ
+    history: '/history',            // หน้าประวัติ
+    index: '/index'
   }
 
   if (routes[pageName]) {
