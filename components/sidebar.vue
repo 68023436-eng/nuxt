@@ -1,8 +1,13 @@
 <template>
   <div class="tw-max-w-60 tw-h-auto tw-p-5 tw-shadow-2xl tw-rounded-xl tw-items-center">
-    <!-- โลโก้ (แนะนำเปลี่ยน path จาก ../public/... เป็น /... ตรงๆ) -->
+    <!-- โลโก้ -->
     <div>
-      <button @click="goTo('index')"><img src="/pic/channels4_profile.png" alt="logo" class="tw-max-h-40 tw-max-w-40" /></button>
+      <img 
+        @click="goTo('main')" 
+        src="/public/pic/logo.png" 
+        alt="logo" 
+        class="tw-max-h-40 tw-max-w-40 tw-cursor-pointer hover:tw-opacity-80 transition" 
+      />
     </div>
     <!-- เมนูทั้ง 3 ปุ่ม: ผูก @click เรียกใช้ฟังก์ชัน goTo -->
     <div class="tw-grid-cols-3 tw-mt-20">
@@ -18,7 +23,7 @@
     </div>
 
     <!-- ส่วนโปรไฟล์และปุ่ม Logout -->
-    <div class="tw-flex tw-items-center tw-max-w-auto tw-bg-slate-300 tw-p-3 tw-mt-48 tw-rounded-xl">
+    <div class="tw-flex tw-items-center tw-max-w-auto tw-bg-slate-300 tw-p-3 tw-mt-60 tw-rounded-xl">
       <div>
         <!-- ผูกรูปโปรไฟล์จากตัวแปร userAvatar -->
         <img :src="userAvatar" alt="avatar" class="tw-h-auto tw-w-auto tw-rounded-full object-cover" />
@@ -46,8 +51,10 @@
 <script setup>
 import { ref } from 'vue'
 
-// ดึงตัวช่วยจัดการเส้นทางของ Nuxt และ Supabase Client
+// ดึงตัวช่วยจัดการเส้นทางของ Nuxt
 const router = useRouter()
+
+// ใช้ Supabase client อย่างปลอดภัย (module ถูก register แล้ว)
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 
@@ -57,12 +64,11 @@ const userAvatar = ref(user.value?.user_metadata?.avatar_url || '/pic/istock-633
 
 // ฟังก์ชันกดเปลี่ยนหน้าตามเมนู
 const goTo = (pageName) => {
-  // ใส่ path หน้าของแต่ละเมนูตามโครงสร้างโฟลเดอร์ pages/ ของโปรเจกต์
   const routes = {
     appointment: '/appointments',  // หน้าใบนัด
     form: '/patient-form',         // หน้ากรอกข้อมูล
-    history: '/history',            // หน้าประวัติ
-    index: '/index'
+    history: '/history',          // หน้าประวัติ
+    main: '/'                     // หน้าแรก (pages/index.vue)
   }
 
   if (routes[pageName]) {
@@ -70,7 +76,7 @@ const goTo = (pageName) => {
   }
 }
 
-// ฟังก์ชันออกจากระบบ (Logout)
+// ฟังก์ชันออกจากระบบ (Logout) — ป้องกัน crash กรณี auth ไม่ได้ setup
 const handleLogout = async () => {
   const confirmLogout = confirm('ต้องการออกจากระบบใช่หรือไม่?')
   if (!confirmLogout) return
@@ -79,11 +85,12 @@ const handleLogout = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
 
-    // ล็อกเอาต์สำเร็จ ให้ดีดกลับไปหน้า Login
-    navigateTo('/login')
+    // ล็อกเอาต์สำเร็จ ให้ดีดกลับไปหน้าแรก
+    navigateTo('/')
   } catch (err) {
     console.error('Logout error:', err.message)
-    alert('เกิดข้อผิดพลาดในการออกจากระบบ')
+    // ถ้า auth ยังไม่ได้ setup ก็แค่กลับหน้าแรก
+    navigateTo('/')
   }
 }
 </script>
