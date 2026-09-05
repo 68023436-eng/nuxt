@@ -137,51 +137,22 @@ def create_appointment(
 # ==========================================
 # 1. API ดึงรายการใบนัดทั้งหมด (เส้นเดียวจบ ครบทุกสถานะ)
 # ==========================================
-@app.get("/api/appointments")
-def get_appointments(db: Session = Depends(get_db)):
-    # ดึงข้อมูลทั้งหมดโดยไม่ใส่ .filter สถานะ เพื่อให้หน้า appointments และ history ดึงไปใช้ร่วมกันได้
-    results = (
-        db.query(
-            Appointment,
-            hospital_dept.dept_name_th,
-            HospitalParking.building_name,
-        )
-        .join(
-            hospital_dept,
-            Appointment.dept_id == hospital_dept.dept_id,
-            isouter=True,
-        )
-        .join(
-            HospitalParking,
-            Appointment.location_id == HospitalParking.location_id,
-            isouter=True,
-        )
-        .order_by(Appointment.appointment_id.desc())
-        .all()
-    )
+# ใน main.py: API ดึงรายชื่อแผนกทั้งหมด
+@app.get("/api/departments")
+def get_departments(db: Session = Depends(get_db)):
+    # ใช้ HospitalDept ตัวพิมพ์ใหญ่
+    depts = db.query(hospital_dept).all()
 
-    data = []
-    for appt, dept_th, bldg in results:
-        data.append(
-            {
-                "appointment_id": appt.appointment_id,
-                "qr_token": appt.qr_token,
-                "patient_name": appt.patient_name,
-                "phone_number": appt.phone_number,
-                "license_plate": appt.license_plate,
-                "dept_id": appt.dept_id,
-                "department_name": dept_th or "ไม่ระบุแผนก",
-                "building_name": bldg or "อาคาร PremiumClinic",
-                "appointment_date": str(appt.appointment_date),
-                "time_slot": appt.time_slot,
-                "status": appt.status,
-                "created_at": appt.created_at.strftime("%d/%m/%Y %H:%M")
-                if appt.created_at
-                else "-",
-            }
-        )
-    return data
-
+    # แปลงเป็น List of Dict เพื่อส่งกลับเป็น JSON ที่หน้าบ้านอ่านง่ายแน่นอน
+    return [
+        {
+            "dept_id": d.dept_id,
+            "dept_code": d.dept_code,
+            "dept_name_th": d.dept_name_th,
+            "dept_name_en": d.dept_name_en,
+        }
+        for d in depts
+    ]
 
 # ==========================================
 # 2. API ลบรายการ (Soft Delete เปลี่ยนสถานะเป็น cancelled)

@@ -9,11 +9,10 @@
       <div class="tw-flex tw-justify-between tw-items-center tw-bg-amber-100 tw-border-l-8 tw-border-l-amber-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
         <div>
           <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">รายการนัดหมาย</h1>
-          <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Hospital Appointments & Parking Management</p>
+          <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Hospital Appointments &amp; Parking Management</p>
         </div>
 
         <div class="tw-flex tw-items-center tw-gap-3">
-          <!-- ปุ่มรีเฟรชข้อมูล -->
           <button 
             @click="fetchAppointments" 
             :disabled="loading"
@@ -310,7 +309,7 @@
               <h3 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">ยืนยันการลบรายการนัดหมาย</h3>
               <p class="tw-text-sm tw-text-gray-600 tw-mb-3">
                 คุณต้องการลบรายการนัดหมายของ 
-                <strong class="tw-text-gray-800 font-semibold">{{ itemToDelete?.patient_name }}</strong> 
+                <strong class="tw-text-gray-800 tw-font-semibold">{{ itemToDelete?.patient_name }}</strong> 
                 (ID: {{ itemToDelete?.appointment_id }}) ใช่หรือไม่?
               </p>
               <p class="tw-text-xs tw-text-amber-600 tw-bg-amber-50 tw-p-2.5 tw-rounded-lg tw-border tw-border-amber-200">
@@ -345,21 +344,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import Sidebar from '~/components/sidebar.vue'
+// ============================================================
+// Composables
+// ============================================================
 
-// บังคับ login ก่อนเข้าหน้านี้
-definePageMeta({
-  middleware: 'auth',
-})
+const { statusClass, statusLabel, formatDate, formatDateTime } = useAppointment()
 
+// ============================================================
 // State
+// ============================================================
+
 const appointments = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
 const deletingId = ref(null)
 
-// ตัวกรองเฉพาะรายการที่ยังใช้งานอยู่
+// ตัวกรองเฉพาะรายการที่ยังใช้งานอยู่ (active, backup)
 const activeAppointments = computed(() => {
   return appointments.value.filter(item => item.status !== 'completed' && item.status !== 'cancelled')
 })
@@ -372,34 +372,38 @@ const selectedAppointment = ref(null)
 const showDeleteModal = ref(false)
 const itemToDelete = ref(null)
 
-// ดึงข้อมูลผ่าน FastAPI Backend
+// ============================================================
+// ดึงข้อมูลผ่าน Nuxt Server API
+// ============================================================
+
 const fetchAppointments = async () => {
   loading.value = true
   errorMsg.value = ''
   try {
-    const data = await $fetch('http://localhost:8000/api/appointments', { method: 'GET' })
+    const data = await $fetch('/api/appointments', { method: 'GET' })
     appointments.value = data || []
   } catch (error) {
-    errorMsg.value = error?.data?.detail || error?.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงข้อมูลได้'
+    errorMsg.value = error?.data?.statusMessage || error?.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงข้อมูลได้'
     console.error('Fetch appointments error:', error)
   } finally {
     loading.value = false
   }
 }
 
-// เปิด Delete Confirm Modal
+// ============================================================
+// Delete Modal Actions
+// ============================================================
+
 const askDeleteAppointment = (item) => {
   itemToDelete.value = item
   showDeleteModal.value = true
 }
 
-// ปิด Delete Confirm Modal
 const closeDeleteModal = () => {
   showDeleteModal.value = false
   itemToDelete.value = null
 }
 
-// ยืนยันลบข้อมูลผ่าน FastAPI
 const confirmDeleteAppointment = async () => {
   if (!itemToDelete.value) return
 
@@ -407,10 +411,7 @@ const confirmDeleteAppointment = async () => {
   deletingId.value = appointmentId
 
   try {
-    // ยิงไปที่ Backend FastAPI พอร์ต 8000
-    await $fetch(`http://localhost:8000/api/appointments/${appointmentId}`, { 
-      method: 'DELETE' 
-    })
+    await $fetch(`/api/appointments/${appointmentId}`, { method: 'DELETE' })
 
     // อัปเดตสถานะในหน้าเว็บทันที (รายการจะหายจากตารางเพราะ activeAppointments กรองออก)
     const targetItem = appointments.value.find(item => item.appointment_id === appointmentId)
@@ -421,72 +422,30 @@ const confirmDeleteAppointment = async () => {
     closeDeleteModal()
     alert('ลบและย้ายข้อมูลไปหน้าประวัติเรียบร้อยแล้ว')
   } catch (error) {
-    alert('เกิดข้อผิดพลาดในการลบ: ' + (error?.data?.detail || error?.message || 'ไม่ทราบสาเหตุ'))
+    alert('เกิดข้อผิดพลาดในการลบ: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
     console.error('Delete error:', error)
   } finally {
     deletingId.value = null
   }
 }
 
-// เปิด Modal ดูรายละเอียด
+// ============================================================
+// Detail Modal Actions
+// ============================================================
+
 const openDetail = (item) => {
   selectedAppointment.value = { ...item }
   showModal.value = true
 }
 
-// ปิด Modal ดูรายละเอียด
 const closeModal = () => {
   showModal.value = false
   selectedAppointment.value = null
 }
 
-// จัดการสี Badge สถานะ
-const statusClass = (status) => {
-  const classes = {
-    active: 'tw-bg-green-100 tw-text-green-700',
-    completed: 'tw-bg-blue-100 tw-text-blue-700',
-    cancelled: 'tw-bg-red-100 tw-text-red-700',
-    backup: 'tw-bg-purple-100 tw-text-purple-700 tw-border tw-border-purple-200',
-  }
-  return classes[status] || 'tw-bg-gray-100 tw-text-gray-700'
-}
-
-// แปลงคำแสดงสถานะ
-const statusLabel = (status) => {
-  const labels = {
-    active: 'กำลังใช้งาน',
-    completed: 'เสร็จสิ้น',
-    cancelled: 'ยกเลิก',
-    backup: 'ข้อมูล backup',
-  }
-  return labels[status] || status || '-'
-}
-
-// แปลงรูปแบบวันที่
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-// แปลงรูปแบบวันที่และเวลาสร้างรายการ
-const formatDateTime = (dateStr) => {
-  if (!dateStr || dateStr === '-') return '-'
-  // หากสตริงถูกฟอร์แมตมาจาก backend แล้วให้แสดงตรงๆ หรือแปลงตาม Date
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return dateStr
-  return date.toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+// ============================================================
+// Lifecycle
+// ============================================================
 
 onMounted(() => {
   fetchAppointments()

@@ -13,7 +13,7 @@
         <button 
           @click="checkSupabase" 
           :disabled="loading"
-          class="tw-bg-blue-600 hover:tw-bg-blue-700 disabled:tw-bg-gray-400 tw-text-white tw-font-medium tw-py-2.5 tw-px-6 tw-rounded-lg tw-shadow-sm transition"
+          class="tw-bg-blue-600 hover:tw-bg-blue-700 disabled:tw-bg-gray-400 tw-text-white tw-font-medium tw-py-2.5 tw-px-6 tw-rounded-lg tw-shadow-sm tw-transition-colors"
         >
           {{ loading ? 'กำลังตรวจสอบ...' : 'ทดสอบเชื่อมต่อ Supabase' }}
         </button>
@@ -27,36 +27,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import Sidebar from '~/components/sidebar.vue'
+// ============================================================
+// State
+// ============================================================
 
-const supabase = useSupabaseClient()
 const loading = ref(false)
 const statusMessage = ref('')
 const isSuccess = ref(false)
+
+// ============================================================
+// Health Check ผ่าน Nuxt Server API (ไม่ expose credentials ที่ client)
+// ============================================================
 
 const checkSupabase = async () => {
   loading.value = true
   statusMessage.value = ''
 
   try {
-    // ทดสอบดึงข้อมูลจากตาราง appointments
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('appointment_id')
-      .limit(1)
-
-    if (error) {
-      throw error
-    }
+    const result = await $fetch('/api/health')
 
     isSuccess.value = true
-    statusMessage.value = `✅ เชื่อมต่อกับ Supabase สำเร็จเรียบร้อย! (พบ ${data?.length ?? 0} รายการ)`
-    console.log('Supabase connection: OK')
+    statusMessage.value = `✅ เชื่อมต่อกับ Supabase สำเร็จเรียบร้อย! (พบ ${result.count ?? 0} รายการ)`
   } catch (err) {
     isSuccess.value = false
-    statusMessage.value = `❌ เชื่อมต่อล้มเหลว: ${err.message || err}`
-    console.error('Supabase Error:', err)
+    statusMessage.value = `❌ เชื่อมต่อล้มเหลว: ${err?.data?.statusMessage || err?.message || err}`
+    console.error('Supabase Health Check Error:', err)
   } finally {
     loading.value = false
   }

@@ -6,7 +6,7 @@
       <!-- Header -->
       <div class="tw-bg-green-100 tw-border-l-8 tw-border-l-green-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
         <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">กรอกข้อมูลใบนัดหมาย</h1>
-        <p class="tw-text-sm tw-text-slate-500 tw-font-mono tw-mt-1">Hospital Appointment & Parking Registration</p>
+        <p class="tw-text-sm tw-text-slate-500 tw-font-mono tw-mt-1">Hospital Appointment &amp; Parking Registration</p>
       </div>
 
       <!-- Form Container -->
@@ -38,6 +38,7 @@
                 type="tel" 
                 required 
                 maxlength="10"
+                pattern="[0-9]{9,10}"
                 placeholder="เช่น 0812345678" 
                 class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
               />
@@ -68,8 +69,8 @@
                 class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-bg-white tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
               >
                 <option :value="null" disabled>-- เลือกแผนกการรักษา --</option>
-                <option v-for="dept in departmentList" :key="dept.dept_id" :value="dept.dept_id">
-                  {{ dept.dept_name_th }} ({{ dept.dept_name_en }})
+                <option v-for="hospital_dept in departmentList" :key="hospital_dept.dept_id" :value="hospital_dept.dept_id">
+                  {{ hospital_dept.dept_name_th }} ({{ hospital_dept.dept_name_en }})
                 </option>
               </select>
             </div>
@@ -122,30 +123,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import Sidebar from '~/components/sidebar.vue'
+// ============================================================
+// State
+// ============================================================
 
-// บังคับ login ก่อนเข้าหน้านี้
-definePageMeta({
-  middleware: 'auth',
+const form = ref({
+  patient_name: '',
+  phone_number: '',
+  license_plate: '',
+  dept_id: null,
+  appointment_date: '',
+  time_slot: '',
 })
 
-const user = useSupabaseUser()
-
-// ตอนสั่งยิงบันทึกใน handleSubmit:
-const payload = {
-  patient_name: form.value.patient_name,
-  phone_number: form.value.phone_number,
-  license_plate: form.value.license_plate,
-  dept_id: form.value.dept_id,
-  appointment_date: form.value.appointment_date,
-  time_slot: form.value.time_slot,
-  user_id: user.value ? user.value.id : null // ได้ user_id จริงๆ จาก Supabase ทันที!
-}
-
+const departmentList = ref([])
 const isSubmitting = ref(false)
 
-// 1. ดึงข้อมูลแผนกจาก FastAPI
+// ============================================================
+// ดึงข้อมูลแผนกจาก FastAPI Backend
+// ============================================================
+
 const fetchDepartments = async () => {
   try {
     const data = await $fetch('http://localhost:8000/api/departments')
@@ -155,39 +152,43 @@ const fetchDepartments = async () => {
   }
 }
 
-// 2. บันทึกข้อมูลส่งไป FastAPI
+// ============================================================
+// บันทึกข้อมูลผ่าน Nuxt Server API
+// ============================================================
+
 const handleSubmit = async () => {
   isSubmitting.value = true
   try {
-    const payload = {
-      ...form.value,
-      user_id: user.value?.id || null // ผูก UUID ของเจ้าหน้าที่ผู้สร้างนัดหมาย
-    }
+    const payload = { ...form.value }
 
-    const res = await $fetch('http://localhost:8000/api/appointments', {
+    const res = await $fetch('/api/appointments', {
       method: 'POST',
-      body: payload
+      body: payload,
     })
 
-    alert(`สร้างใบนัดสำเร็จ! รหัส QR: ${res.data.qr_token}`)
+    alert(`สร้างใบนัดสำเร็จ! รหัส QR: ${res.data?.qr_token || '-'}`)
 
     // รีเซ็ตฟอร์ม
     form.value = {
       patient_name: '',
       phone_number: '',
       license_plate: '',
-      dept_id: null,
+      dept_id: '',
       appointment_date: '',
-      time_slot: ''
+      time_slot: '',
     }
-
   } catch (error) {
-    alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
-    console.error(error)
+    const message = error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'
+    alert(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${message}`)
+    console.error('Submit error:', error)
   } finally {
     isSubmitting.value = false
   }
 }
+
+// ============================================================
+// Lifecycle
+// ============================================================
 
 onMounted(() => {
   fetchDepartments()

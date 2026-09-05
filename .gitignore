@@ -25,3 +25,13 @@ logs
 .venv
 .venv*
 venv
+
+# Generated build artifacts
+*.d.ts
+*.d.ts.map
+*.js.map
+nuxt.config.js
+
+# Python cache
+__pycache__/
+*.pyc
