@@ -59,7 +59,7 @@
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ทะเบียนรถ</th>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">แผนกตรวจ</th>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วันและเวลานัดหมาย</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">สถานะเดิม</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">สถานะ</th>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-text-center">จัดการ</th>
             </tr>
           </thead>
@@ -276,7 +276,7 @@
               <h3 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">ยืนยันการกู้คืนข้อมูล</h3>
               <p class="tw-text-sm tw-text-gray-600 tw-mb-4">
                 คุณต้องการกู้คืนรายการนัดหมายของ 
-                <strong class="tw-text-gray-800 font-semibold">{{ itemToRestore?.patient_name }}</strong> 
+                <strong class="tw-text-gray-800 tw-font-semibold">{{ itemToRestore?.patient_name }}</strong> 
                 (ID: {{ itemToRestore?.appointment_id }}) กลับไปยังหน้ารายการนัดหมายใช่หรือไม่?
               </p>
               <p class="tw-text-xs tw-text-purple-700 tw-bg-purple-50 tw-p-3 tw-rounded-xl tw-border tw-border-purple-200">
@@ -310,15 +310,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import Sidebar from '~/components/sidebar.vue'
+// ============================================================
+// Composables
+// ============================================================
 
-// บังคับ login ก่อนเข้าหน้านี้
-definePageMeta({
-  middleware: 'auth',
-})
+const { statusClass, statusLabel, formatDate } = useAppointment()
 
+// ============================================================
 // State
+// ============================================================
+
 const appointments = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
@@ -338,34 +339,37 @@ const selectedAppointment = ref(null)
 const showRestoreModal = ref(false)
 const itemToRestore = ref(null)
 
-// ดึงประวัติจาก Backend FastAPI พอร์ต 8000
+// ============================================================
+// ดึงประวัติจาก Nuxt Server API
+// ============================================================
+
 const fetchHistory = async () => {
   loading.value = true
   errorMsg.value = ''
   try {
-    // เรียกเส้นเดียวกับหน้า appointments.vue ได้เลย
-    const data = await $fetch('http://localhost:8000/api/appointments', { method: 'GET' })
+    const data = await $fetch('/api/appointments', { method: 'GET' })
     appointments.value = data || []
   } catch (error) {
-    errorMsg.value = error?.data?.detail || error?.message || 'ไม่สามารถดึงข้อมูลประวัติได้'
+    errorMsg.value = error?.data?.statusMessage || error?.message || 'ไม่สามารถดึงข้อมูลประวัติได้'
   } finally {
     loading.value = false
   }
 }
 
-// เปิด Restore Modal
+// ============================================================
+// Restore Modal Actions
+// ============================================================
+
 const askRestoreAppointment = (item) => {
   itemToRestore.value = item
   showRestoreModal.value = true
 }
 
-// ปิด Restore Modal
 const closeRestoreModal = () => {
   showRestoreModal.value = false
   itemToRestore.value = null
 }
 
-// ยืนยันการกู้คืนข้อมูล
 const confirmRestoreAppointment = async () => {
   if (!itemToRestore.value) return
 
@@ -374,8 +378,7 @@ const confirmRestoreAppointment = async () => {
   restoringId.value = appointmentId
 
   try {
-    // ยิง PUT ไปที่ Backend เพื่อกู้คืนและเปลี่ยนสถานะเป็น backup
-    await $fetch(`http://localhost:8000/api/appointments/${appointmentId}/restore`, { method: 'PUT' })
+    await $fetch(`/api/appointments/${appointmentId}/restore`, { method: 'POST' })
 
     // อัปเดตในตารางฝั่งหน้าเว็บให้เป็น 'backup' ทันที (จะหลุดออกจากตัวกรอง historyAppointments อัตโนมัติ)
     const item = appointments.value.find(i => i.appointment_id === appointmentId)
@@ -391,16 +394,18 @@ const confirmRestoreAppointment = async () => {
     setTimeout(() => {
       toastMsg.value = ''
     }, 4000)
-
   } catch (error) {
-    alert('เกิดข้อผิดพลาดในการกู้คืน: ' + (error?.data?.detail || error?.message || 'ไม่ทราบสาเหตุ'))
+    alert('เกิดข้อผิดพลาดในการกู้คืน: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
     console.error('Restore error:', error)
   } finally {
     restoringId.value = null
   }
 }
 
+// ============================================================
 // Detail Modal Actions
+// ============================================================
+
 const openDetail = (item) => {
   selectedAppointment.value = { ...item }
   showModal.value = true
@@ -411,38 +416,9 @@ const closeModal = () => {
   selectedAppointment.value = null
 }
 
-// แปลงสไตล์สี Badge
-const statusClass = (status) => {
-  const classes = {
-    cancelled: 'tw-bg-red-100 tw-text-red-700',
-    completed: 'tw-bg-blue-100 tw-text-blue-700',
-    backup: 'tw-bg-purple-100 tw-text-purple-700 tw-border tw-border-purple-200',
-    active: 'tw-bg-green-100 tw-text-green-700'
-  }
-  return classes[status] || 'tw-bg-gray-100 tw-text-gray-700'
-}
-
-// แปลงข้อความ Badge
-const statusLabel = (status) => {
-  const labels = {
-    cancelled: 'ยกเลิกแล้ว',
-    completed: 'เสร็จสิ้น',
-    backup: 'ข้อมูล backup',
-    active: 'กำลังใช้งาน'
-  }
-  return labels[status] || status || '-'
-}
-
-// แปลงรูปแบบวันที่
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
+// ============================================================
+// Lifecycle
+// ============================================================
 
 onMounted(() => {
   fetchHistory()

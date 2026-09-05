@@ -1,6 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 
-// ฟังก์ชัน sanitize ข้อความป้องกัน XSS
+/** ฟังก์ชัน sanitize ข้อความป้องกัน XSS */
 function sanitizeString(str: string): string {
   return str
     .replace(/</g, '&lt;')
@@ -10,19 +10,23 @@ function sanitizeString(str: string): string {
     .trim()
 }
 
-// รายการ status ที่อนุญาต
-const ALLOWED_STATUSES = ['active', 'completed', 'cancelled']
+/** รายการ status ที่อนุญาต */
+const ALLOWED_STATUSES = ['active', 'completed', 'cancelled'] as const
 
-// รายการ user_id ที่มีอยู่ในระบบ hospital_user
-const VALID_USER_IDS = [9601, 9602, 9045, 42]
+/** รูปแบบเบอร์โทรศัพท์ (ตัวเลข 9-10 หลัก) */
+const PHONE_REGEX = /^\d{9,10}$/
 
+/**
+ * POST /api/appointments
+ * สร้างนัดหมายใหม่ พร้อม validation ครบถ้วน
+ */
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
 
     // === Input Validation ===
 
-    // 1. ตรวจสอบว่ามีข้อมูลครบ
+    // 1. ตรวจสอบว่ามีข้อมูลที่จำเป็นครบ
     if (!body.patient_name || !body.appointment_date || !body.time_slot) {
       throw createError({
         statusCode: 400,
@@ -30,7 +34,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 2. ตรวจสอบชื่อผู้ป่วย (ไม่เกิน 100 ตัวอักษร)
+    // 2. ตรวจสอบชื่อผู้ป่วย (1-100 ตัวอักษร)
     const patientName = sanitizeString(String(body.patient_name))
     if (patientName.length === 0 || patientName.length > 100) {
       throw createError({
@@ -39,7 +43,32 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. ตรวจสอบวันนัดหมาย (format YYYY-MM-DD)
+    // 3. ตรวจสอบเบอร์โทรศัพท์ (ถ้าส่งมา ต้องเป็นตัวเลข 9-10 หลัก)
+    let phoneNumber: string | null = null
+    if (body.phone_number) {
+      const cleanPhone = String(body.phone_number).replace(/\s|-/g, '')
+      if (!PHONE_REGEX.test(cleanPhone)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก',
+        })
+      }
+      phoneNumber = cleanPhone
+    }
+
+    // 4. ตรวจสอบทะเบียนรถ (ถ้าส่งมา ต้องไม่ยาวเกิน 20 ตัวอักษร)
+    let licensePlate: string | null = null
+    if (body.license_plate) {
+      licensePlate = sanitizeString(String(body.license_plate))
+      if (licensePlate.length > 20) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'ทะเบียนรถต้องไม่เกิน 20 ตัวอักษร',
+        })
+      }
+    }
+
+    // 5. ตรวจสอบวันนัดหมาย (format YYYY-MM-DD)
     const appointmentDate = String(body.appointment_date).trim()
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/
     if (!dateRegex.test(appointmentDate)) {
@@ -49,7 +78,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 4. ตรวจสอบ time_slot (ไม่เกิน 30 ตัวอักษร)
+    // 6. ตรวจสอบ time_slot (1-30 ตัวอักษร)
     const timeSlot = sanitizeString(String(body.time_slot))
     if (timeSlot.length === 0 || timeSlot.length > 30) {
       throw createError({
@@ -58,36 +87,27 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 5. ตรวจสอบ status (ถ้าไม่ระบุให้เป็น active)
+    // 7. ตรวจสอบ status (default: active)
     const status = body.status ? String(body.status).trim() : 'active'
-    if (!ALLOWED_STATUSES.includes(status)) {
+    if (!ALLOWED_STATUSES.includes(status as any)) {
       throw createError({
         statusCode: 400,
         statusMessage: 'สถานะต้องเป็น active, completed หรือ cancelled',
       })
     }
 
-    // 6. กำหนดค่า dept_id (ถ้าไม่ส่งมา ให้ใช้ค่าเริ่มต้น 91)
+    // 8. กำหนดค่า dept_id (default: 91)
     let deptId = 91
-    if (body.dept_id !== undefined && body.dept_id !== null && body.dept_id !== '') {
+    if (body.dept_id != null && body.dept_id !== '') {
       const parsedDeptId = Number(body.dept_id)
       if (!isNaN(parsedDeptId) && parsedDeptId > 0) {
         deptId = parsedDeptId
       }
     }
 
-    // 7. กำหนดค่า user_id (ถ้าไม่ส่งมาหรือ invalid ให้ใช้ค่าเริ่มต้น 9601 เพื่อผ่าน Foreign Key)
-    let userId = 9601
-    if (body.user_id !== undefined && body.user_id !== null && body.user_id !== '') {
-      const parsedUserId = Number(body.user_id)
-      if (VALID_USER_IDS.includes(parsedUserId)) {
-        userId = parsedUserId
-      }
-    }
-
-    // 8. กำหนดค่า location_id (ถ้าไม่ส่งมา ให้ใช้ค่าเริ่มต้น 1 เพื่อผ่าน Foreign Key)
+    // 9. กำหนดค่า location_id (default: 1)
     let locationId = 1
-    if (body.location_id !== undefined && body.location_id !== null && body.location_id !== '') {
+    if (body.location_id != null && body.location_id !== '') {
       const parsedLocationId = Number(body.location_id)
       if (!isNaN(parsedLocationId) && parsedLocationId > 0) {
         locationId = parsedLocationId
@@ -102,21 +122,22 @@ export default defineEventHandler(async (event) => {
     // === Insert ข้อมูลเข้า Supabase ===
     const client = await serverSupabaseClient(event)
 
-    const insertData = {
+    const insertData: Record<string, any> = {
       patient_name: patientName,
+      phone_number: phoneNumber,
+      license_plate: licensePlate,
       appointment_date: appointmentDate,
       time_slot: timeSlot,
-      status: status,
+      status,
       qr_token: qrToken,
       dept_id: deptId,
-      user_id: userId,
       location_id: locationId,
     }
 
     const { data, error } = await client
       .from('appointments')
       .insert([insertData])
-      .select('appointment_id, qr_token, patient_name, appointment_date, time_slot, status, created_at, user_id, location_id, dept_id')
+      .select('appointment_id, qr_token, patient_name, appointment_date, time_slot, status, created_at, dept_id')
 
     if (error) {
       console.error('Server insert error details:', error)
