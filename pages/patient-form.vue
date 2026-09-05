@@ -1,14 +1,12 @@
 <template>
   <div class="tw-flex tw-min-h-screen tw-w-full tw-bg-slate-50">
-    <!-- Sidebar -->
     <Sidebar />
 
-    <!-- Main Content -->
     <div class="tw-flex-1 tw-p-8">
-      <!-- Header Banner -->
+      <!-- Header -->
       <div class="tw-bg-green-100 tw-border-l-8 tw-border-l-green-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
-        <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">กรอกข้อมูลใบนัด</h1>
-        <p class="tw-text-sm tw-text-slate-500 tw-font-mono tw-mt-1">Patient Appointment Form</p>
+        <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">กรอกข้อมูลใบนัดหมาย</h1>
+        <p class="tw-text-sm tw-text-slate-500 tw-font-mono tw-mt-1">Hospital Appointment & Parking Registration</p>
       </div>
 
       <!-- Form Container -->
@@ -16,113 +14,98 @@
         <form @submit.prevent="handleSubmit" class="tw-space-y-6">
           <div class="tw-grid tw-grid-cols-1 md:tw-grid-cols-2 tw-gap-6">
             
-            <!-- 1. ชื่อคนไข้ -->
+            <!-- ชื่อคนไข้ -->
             <div>
               <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                ชื่อผู้ป่วย <span class="tw-text-red-500">*</span>
+                ชื่อ-นามสกุล คนไข้ <span class="tw-text-red-500">*</span>
               </label>
               <input 
                 v-model="form.patient_name" 
                 type="text" 
-                required
-                maxlength="100"
+                required 
                 placeholder="เช่น สมชาย ใจดี" 
-                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400 focus:tw-border-transparent transition"
+                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
               />
-              <p v-if="validationErrors.patient_name" class="tw-text-red-500 tw-text-xs tw-mt-1">{{ validationErrors.patient_name }}</p>
             </div>
 
-            <!-- 2. วันนัดหมาย -->
+            <!-- เบอร์โทรศัพท์ -->
             <div>
               <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                วันนัดหมาย <span class="tw-text-red-500">*</span>
+                เบอร์โทรศัพท์ติดต่อ <span class="tw-text-red-500">*</span>
               </label>
               <input 
-                v-model="form.appointment_date" 
-                type="date" 
-                required
-                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400 focus:tw-border-transparent transition"
+                v-model="form.phone_number" 
+                type="tel" 
+                required 
+                maxlength="10"
+                placeholder="เช่น 0812345678" 
+                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
               />
-              <p v-if="validationErrors.appointment_date" class="tw-text-red-500 tw-text-xs tw-mt-1">{{ validationErrors.appointment_date }}</p>
             </div>
 
-            <!-- 3. ช่วงเวลา -->
+            <!-- ทะเบียนรถ -->
             <div>
               <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                ช่วงเวลา <span class="tw-text-red-500">*</span>
+                ทะเบียนรถยนต์ <span class="tw-text-red-500">*</span>
               </label>
-              <select 
-                v-model="form.time_slot" 
-                required
-                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-bg-white tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400 focus:tw-border-transparent transition"
-              >
-                <option value="" disabled>-- เลือกช่วงเวลา --</option>
-                <option v-for="slot in timeSlots" :key="slot" :value="slot">
-                  {{ slot }}
-                </option>
-              </select>
-              <p v-if="validationErrors.time_slot" class="tw-text-red-500 tw-text-xs tw-mt-1">{{ validationErrors.time_slot }}</p>
+              <input 
+                v-model="form.license_plate" 
+                type="text" 
+                required 
+                placeholder="เช่น 1กข 1234 กทม" 
+                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
+              />
             </div>
 
-            <!-- 4. เลือกแผนกการรักษา -->
+            <!-- แผนก (ดึงข้อมูลจาก Database) -->
             <div>
               <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
                 แผนกที่นัดหมาย <span class="tw-text-red-500">*</span>
               </label>
               <select 
-                v-model.number="form.dept_id" 
+                v-model="form.dept_id" 
                 required
-                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-bg-white tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400 focus:tw-border-transparent transition"
+                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-bg-white tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
               >
-                <option v-for="dept in departmentList" :key="dept.id" :value="dept.id">
-                  {{ dept.name }} (ID: {{ dept.id }})
+                <option :value="null" disabled>-- เลือกแผนกการรักษา --</option>
+                <option v-for="dept in departmentList" :key="dept.dept_id" :value="dept.dept_id">
+                  {{ dept.dept_name_th }} ({{ dept.dept_name_en }})
                 </option>
               </select>
             </div>
 
-            <!-- 5. เจ้าหน้าที่ผู้ลงบันทึก -->
+            <!-- วันที่นัดหมาย -->
             <div>
               <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                เจ้าหน้าที่ผู้ลงบันทึก
+                วันที่นัดหมาย <span class="tw-text-red-500">*</span>
+              </label>
+              <input 
+                v-model="form.appointment_date" 
+                type="date" 
+                required 
+                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
+              />
+            </div>
+
+            <!-- ช่วงเวลานัดหมาย -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                ช่วงเวลาเข้าตรวจ <span class="tw-text-red-500">*</span>
               </label>
               <select 
-                v-model.number="form.user_id" 
-                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-bg-white tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400 focus:tw-border-transparent transition"
+                v-model="form.time_slot" 
+                required
+                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-bg-white tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
               >
-                <option v-for="user in staffList" :key="user.id" :value="user.id">
-                  {{ user.name }} ({{ user.role }})
-                </option>
+                <option value="" disabled>-- เลือกช่วงเวลา --</option>
+                <option value="09:00 - 12:00">ช่วงเช้า (09:00 - 12:00)</option>
+                <option value="13:00 - 16:00">ช่วงบ่าย (13:00 - 16:00)</option>
               </select>
             </div>
 
-            <!-- 6. สถานที่ -->
-            <div>
-              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                รหัสสถานที่ (Location)
-              </label>
-              <select 
-                v-model.number="form.location_id" 
-                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-bg-white tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400 focus:tw-border-transparent transition"
-              >
-                <option :value="1">อาคารผู้ป่วยนอก (Location ID: 1)</option>
-              </select>
-            </div>
-
           </div>
 
-          <!-- Success Message -->
-          <div v-if="successMsg" class="tw-bg-green-50 tw-border tw-border-green-200 tw-p-4 tw-rounded-xl tw-text-green-700 tw-text-sm tw-flex tw-items-center tw-gap-2">
-            <span>✅</span>
-            <span>{{ successMsg }}</span>
-          </div>
-
-          <!-- Error Message -->
-          <div v-if="serverError" class="tw-bg-red-50 tw-border tw-border-red-200 tw-p-4 tw-rounded-xl tw-text-red-600 tw-text-sm tw-flex tw-items-center tw-gap-2">
-            <span>❌</span>
-            <span>{{ serverError }}</span>
-          </div>
-
-          <!-- Action Buttons -->
+          <!-- Submit Button -->
           <div class="tw-flex tw-justify-end tw-pt-4 tw-border-t tw-border-slate-100">
             <button 
               type="submit" 
@@ -139,126 +122,74 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, onMounted } from 'vue'
 import Sidebar from '~/components/sidebar.vue'
 
-// ช่วงเวลานัดหมาย
-const timeSlots = [
-  '09:00 - 12:00',
-  '13:00 - 16:00',
-  '16:00 - 19:00',
-]
-
-// รายการแผนก (mapping กับ dept_id ในระบบ)
-const departmentList = [
-  { id: 91, name: 'แผนกอายุรกรรม' },
-  { id: 92, name: 'แผนกศัลยกรรม' },
-  { id: 93, name: 'แผนกสูติ-นรีเวชกรรม' },
-  { id: 94, name: 'แผนกกระดูกและข้อ (ออร์โธปิดิกส์)' },
-]
-
-// รายการเจ้าหน้าที่ (mapping กับ user_id ในระบบ hospital_user)
-const staffList = [
-  { id: 9601, name: 'Chompoo (Supapron)', role: 'Clinic Staff' },
-  { id: 9602, name: 'Nisa (Nisarat)', role: 'Clinic Staff' },
-  { id: 9045, name: 'Ball (BallKhonlhor)', role: 'Security Guard' },
-  { id: 42, name: 'Deaw (DeawKhonlhor)', role: 'Admin' },
-]
-
-// วันที่ปัจจุบันในรูปแบบ YYYY-MM-DD
-const today = new Date().toISOString().split('T')[0]
-
-// State ผูกกับฟอร์ม
-const form = ref({
-  patient_name: '',
-  appointment_date: today,
-  time_slot: '09:00 - 12:00',
-  dept_id: 91,
-  user_id: 9601,
-  location_id: 1,
+// บังคับ login ก่อนเข้าหน้านี้
+definePageMeta({
+  middleware: 'auth',
 })
 
-// Submit state
-const isSubmitting = ref(false)
-const successMsg = ref('')
-const serverError = ref('')
+const user = useSupabaseUser()
 
-// Validation errors
-const validationErrors = reactive({
-  patient_name: '',
-  appointment_date: '',
-  time_slot: '',
-})
-
-// Client-side validation
-const validateForm = () => {
-  let isValid = true
-
-  validationErrors.patient_name = ''
-  validationErrors.appointment_date = ''
-  validationErrors.time_slot = ''
-
-  // ตรวจสอบชื่อ
-  const name = form.value.patient_name.trim()
-  if (!name) {
-    validationErrors.patient_name = 'กรุณากรอกชื่อผู้ป่วย'
-    isValid = false
-  } else if (name.length > 100) {
-    validationErrors.patient_name = 'ชื่อต้องไม่เกิน 100 ตัวอักษร'
-    isValid = false
-  }
-
-  // ตรวจสอบวันนัดหมาย
-  if (!form.value.appointment_date) {
-    validationErrors.appointment_date = 'กรุณาเลือกวันนัดหมาย'
-    isValid = false
-  }
-
-  // ตรวจสอบช่วงเวลา
-  if (!form.value.time_slot) {
-    validationErrors.time_slot = 'กรุณาเลือกช่วงเวลา'
-    isValid = false
-  }
-
-  return isValid
+// ตอนสั่งยิงบันทึกใน handleSubmit:
+const payload = {
+  patient_name: form.value.patient_name,
+  phone_number: form.value.phone_number,
+  license_plate: form.value.license_plate,
+  dept_id: form.value.dept_id,
+  appointment_date: form.value.appointment_date,
+  time_slot: form.value.time_slot,
+  user_id: user.value ? user.value.id : null // ได้ user_id จริงๆ จาก Supabase ทันที!
 }
 
-// ฟังก์ชันบันทึกข้อมูลผ่าน Server API
+const isSubmitting = ref(false)
+
+// 1. ดึงข้อมูลแผนกจาก FastAPI
+const fetchDepartments = async () => {
+  try {
+    const data = await $fetch('http://localhost:8000/api/departments')
+    departmentList.value = data
+  } catch (error) {
+    console.error('โหลดข้อมูลแผนกไม่สำเร็จ:', error)
+  }
+}
+
+// 2. บันทึกข้อมูลส่งไป FastAPI
 const handleSubmit = async () => {
-  successMsg.value = ''
-  serverError.value = ''
-
-  if (!validateForm()) return
-
   isSubmitting.value = true
   try {
-    const body = {
-      patient_name: form.value.patient_name.trim(),
-      appointment_date: form.value.appointment_date,
-      time_slot: form.value.time_slot,
-      dept_id: form.value.dept_id,
-      user_id: form.value.user_id,
-      location_id: form.value.location_id,
+    const payload = {
+      ...form.value,
+      user_id: user.value?.id || null // ผูก UUID ของเจ้าหน้าที่ผู้สร้างนัดหมาย
     }
 
-    await $fetch('/api/appointments', {
+    const res = await $fetch('http://localhost:8000/api/appointments', {
       method: 'POST',
-      body
+      body: payload
     })
 
-    successMsg.value = 'บันทึกข้อมูลใบนัดสำเร็จเรียบร้อย!'
+    alert(`สร้างใบนัดสำเร็จ! รหัส QR: ${res.data.qr_token}`)
 
-    // ล้างเฉพาะชื่อผู้ป่วย แต่คงค่า default อื่นๆ ไว้เพื่อความสะดวก
-    form.value.patient_name = ''
-
-    // ซ่อน success message หลัง 4 วินาที
-    setTimeout(() => { successMsg.value = '' }, 4000)
+    // รีเซ็ตฟอร์ม
+    form.value = {
+      patient_name: '',
+      phone_number: '',
+      license_plate: '',
+      dept_id: null,
+      appointment_date: '',
+      time_slot: ''
+    }
 
   } catch (error) {
-    serverError.value = error?.data?.statusMessage || error?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล'
-    console.error('Insert error:', error?.data?.statusMessage || error?.message)
+    alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+    console.error(error)
   } finally {
     isSubmitting.value = false
   }
 }
+
+onMounted(() => {
+  fetchDepartments()
+})
 </script>

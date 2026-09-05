@@ -5,10 +5,23 @@
 
     <!-- Main Content -->
     <div class="tw-flex-1 tw-p-8">
-      <!-- Header Banner -->
-      <div class="tw-bg-amber-100 tw-border-l-8 tw-border-l-amber-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
-        <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">รายการนัดหมาย</h1>
-        <p class="tw-text-sm tw-text-slate-500 tw-font-mono tw-mt-1">Appointments</p>
+      <!-- Header Banner พร้อมปุ่มรีเฟรช -->
+      <div class="tw-flex tw-justify-between tw-items-center tw-bg-amber-100 tw-border-l-8 tw-border-l-amber-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
+        <div>
+          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">รายการนัดหมาย</h1>
+          <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Hospital Appointments & Parking Management</p>
+        </div>
+
+        <div class="tw-flex tw-items-center tw-gap-3">
+          <!-- ปุ่มรีเฟรชข้อมูล -->
+          <button 
+            @click="fetchAppointments" 
+            :disabled="loading"
+            class="tw-bg-white hover:tw-bg-amber-50 disabled:tw-bg-gray-100 tw-text-amber-800 tw-border tw-border-amber-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
+          >
+            <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล' }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Loading State -->
@@ -35,9 +48,10 @@
           <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
             <tr>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ลำดับ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ชื่อผู้ป่วย</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วันนัดหมาย</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ช่วงเวลา</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ชื่อผู้ป่วย / เบอร์โทร</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ทะเบียนรถ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">แผนกตรวจ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วันนัดหมาย / เวลา</th>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">สถานะ</th>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-text-center">จัดการ</th>
             </tr>
@@ -48,25 +62,49 @@
               :key="item.appointment_id"
               class="tw-border-b tw-border-slate-100 hover:tw-bg-slate-50 tw-transition-colors"
             >
+              <!-- ลำดับ -->
               <td class="tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
-              <td class="tw-px-5 tw-py-4 tw-font-medium tw-text-gray-800">{{ item.patient_name }}</td>
-              <td class="tw-px-5 tw-py-4 tw-text-gray-600">{{ formatDate(item.appointment_date) }}</td>
-              <td class="tw-px-5 tw-py-4 tw-text-gray-600">{{ item.time_slot }}</td>
+              
+              <!-- ชื่อและเบอร์โทรศัพท์ -->
+              <td class="tw-px-5 tw-py-4">
+                <div class="tw-font-medium tw-text-gray-800">{{ item.patient_name }}</div>
+                <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5">{{ item.phone_number || '-' }}</div>
+              </td>
+
+              <!-- ทะเบียนรถยนต์ -->
+              <td class="tw-px-5 tw-py-4">
+                <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
+                  {{ item.license_plate }}
+                </span>
+              </td>
+
+              <!-- แผนกตรวจ -->
+              <td class="tw-px-5 tw-py-4 tw-text-gray-700">
+                {{ item.department_name || item.dept_id || '-' }}
+              </td>
+
+              <!-- วันและเวลา -->
+              <td class="tw-px-5 tw-py-4">
+                <div class="tw-text-gray-700">{{ formatDate(item.appointment_date) }}</div>
+                <div class="tw-text-xs tw-text-amber-600 tw-font-medium tw-mt-0.5">{{ item.time_slot }}</div>
+              </td>
+
+              <!-- สถานะ -->
               <td class="tw-px-5 tw-py-4">
                 <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
                   {{ statusLabel(item.status) }}
                 </span>
               </td>
+
+              <!-- ปุ่มจัดการ -->
               <td class="tw-px-5 tw-py-4 tw-text-center">
                 <div class="tw-flex tw-justify-center tw-gap-2">
-                  <!-- ปุ่มดูเพิ่มเติม -->
                   <button 
                     @click="openDetail(item)"
                     class="tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
                   >
                     ดูเพิ่มเติม
                   </button>
-                  <!-- ปุ่มลบ (เปิด Confirm Modal) -->
                   <button 
                     @click="askDeleteAppointment(item)"
                     :disabled="deletingId === item.appointment_id"
@@ -116,7 +154,7 @@
             <!-- Modal Body -->
             <div v-if="selectedAppointment" class="tw-px-6 tw-py-5 tw-space-y-4">
               
-              <!-- Appointment ID -->
+              <!-- รหัสนัดหมาย -->
               <div class="tw-flex tw-items-start tw-gap-3">
                 <div class="tw-w-8 tw-h-8 tw-bg-slate-100 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
                   <span class="tw-text-slate-500 tw-text-sm">#</span>
@@ -135,6 +173,50 @@
                 <div>
                   <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">ชื่อผู้ป่วย</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.patient_name }}</p>
+                </div>
+              </div>
+
+              <!-- เบอร์โทรศัพท์ -->
+              <div class="tw-flex tw-items-start tw-gap-3">
+                <div class="tw-w-8 tw-h-8 tw-bg-emerald-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
+                  <span class="tw-text-emerald-500 tw-text-sm">📞</span>
+                </div>
+                <div>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">เบอร์โทรศัพท์</p>
+                  <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.phone_number || '-' }}</p>
+                </div>
+              </div>
+
+              <!-- ทะเบียนรถยนต์ -->
+              <div class="tw-flex tw-items-start tw-gap-3">
+                <div class="tw-w-8 tw-h-8 tw-bg-cyan-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
+                  <span class="tw-text-cyan-500 tw-text-sm">🚗</span>
+                </div>
+                <div>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">ทะเบียนรถยนต์ที่จองสิทธิ์</p>
+                  <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.license_plate }}</p>
+                </div>
+              </div>
+
+              <!-- แผนกตรวจ -->
+              <div class="tw-flex tw-items-start tw-gap-3">
+                <div class="tw-w-8 tw-h-8 tw-bg-teal-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
+                  <span class="tw-text-teal-500 tw-text-sm">🏥</span>
+                </div>
+                <div>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">แผนกตรวจ</p>
+                  <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.department_name || `รหัสแผนก: ${selectedAppointment.dept_id}` }}</p>
+                </div>
+              </div>
+
+              <!-- ตึกและจุดจอด -->
+              <div class="tw-flex tw-items-start tw-gap-3">
+                <div class="tw-w-8 tw-h-8 tw-bg-violet-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
+                  <span class="tw-text-violet-500 tw-text-sm">🅿️</span>
+                </div>
+                <div>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">อาคารจอดรถ</p>
+                  <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.building_name || 'อาคาร PremiumClinic' }}</p>
                 </div>
               </div>
 
@@ -166,7 +248,7 @@
                   <span class="tw-text-indigo-500 tw-text-sm">🔑</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">QR Token</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">QR Token สำหรับสแกน</p>
                   <p class="tw-text-gray-800 tw-font-mono tw-text-sm">{{ selectedAppointment.qr_token }}</p>
                 </div>
               </div>
@@ -181,17 +263,6 @@
                   <span :class="statusClass(selectedAppointment.status)" class="tw-inline-block tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-medium tw-mt-0.5">
                     {{ statusLabel(selectedAppointment.status) }}
                   </span>
-                </div>
-              </div>
-
-              <!-- แผนก (dept_id) -->
-              <div class="tw-flex tw-items-start tw-gap-3">
-                <div class="tw-w-8 tw-h-8 tw-bg-teal-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
-                  <span class="tw-text-teal-500 tw-text-sm">🏥</span>
-                </div>
-                <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">รหัสแผนก</p>
-                  <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.dept_id || '-' }}</p>
                 </div>
               </div>
 
@@ -243,7 +314,7 @@
                 (ID: {{ itemToDelete?.appointment_id }}) ใช่หรือไม่?
               </p>
               <p class="tw-text-xs tw-text-amber-600 tw-bg-amber-50 tw-p-2.5 tw-rounded-lg tw-border tw-border-amber-200">
-                รายการนี้จะถูกย้ายไปเก็บที่<strong>ประวัติ</strong>โดยสามารถกู้คืนกลับมาได้ตลอดเวลา
+                รายการนี้จะถูกลบออกจากระบบของโรงพยาบาล
               </p>
             </div>
 
@@ -261,7 +332,7 @@
                 :disabled="deletingId !== null"
                 class="tw-bg-red-600 hover:tw-bg-red-700 disabled:tw-bg-gray-400 tw-text-white tw-font-medium tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm tw-transition-colors tw-shadow-sm"
               >
-                {{ deletingId !== null ? 'กำลังย้ายไปประวัติ...' : 'ยืนยันลบรายการ' }}
+                {{ deletingId !== null ? 'กำลังลบ...' : 'ยืนยันลบรายการ' }}
               </button>
             </div>
 
@@ -277,15 +348,20 @@
 import { ref, computed, onMounted } from 'vue'
 import Sidebar from '~/components/sidebar.vue'
 
+// บังคับ login ก่อนเข้าหน้านี้
+definePageMeta({
+  middleware: 'auth',
+})
+
 // State
 const appointments = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
 const deletingId = ref(null)
 
-// List filtered for active & backup items (hide completed history items)
+// ตัวกรองเฉพาะรายการที่ยังใช้งานอยู่
 const activeAppointments = computed(() => {
-  return appointments.value.filter(item => item.status !== 'completed')
+  return appointments.value.filter(item => item.status !== 'completed' && item.status !== 'cancelled')
 })
 
 // Detail Modal State
@@ -296,16 +372,16 @@ const selectedAppointment = ref(null)
 const showDeleteModal = ref(false)
 const itemToDelete = ref(null)
 
-// ฟังก์ชันดึงข้อมูลผ่าน Server API
+// ดึงข้อมูลผ่าน FastAPI Backend
 const fetchAppointments = async () => {
   loading.value = true
   errorMsg.value = ''
   try {
-    const data = await $fetch('/api/appointments', { method: 'GET' })
+    const data = await $fetch('http://localhost:8000/api/appointments', { method: 'GET' })
     appointments.value = data || []
   } catch (error) {
-    errorMsg.value = error?.data?.statusMessage || error?.message || 'ไม่สามารถดึงข้อมูลได้'
-    console.error('Fetch error:', error?.data?.statusMessage || error?.message)
+    errorMsg.value = error?.data?.detail || error?.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงข้อมูลได้'
+    console.error('Fetch appointments error:', error)
   } finally {
     loading.value = false
   }
@@ -323,7 +399,7 @@ const closeDeleteModal = () => {
   itemToDelete.value = null
 }
 
-// ยืนยันลบข้อมูลผ่าน Server API
+// ยืนยันลบข้อมูลผ่าน FastAPI
 const confirmDeleteAppointment = async () => {
   if (!itemToDelete.value) return
 
@@ -331,38 +407,40 @@ const confirmDeleteAppointment = async () => {
   deletingId.value = appointmentId
 
   try {
-    await $fetch(`/api/appointments/${appointmentId}`, { method: 'DELETE' })
+    // ยิงไปที่ Backend FastAPI พอร์ต 8000
+    await $fetch(`http://localhost:8000/api/appointments/${appointmentId}`, { 
+      method: 'DELETE' 
+    })
 
-    // อัปเดตสถานะใน local state เป็น 'completed' (จะทำให้ activeAppointments ซ่อนรายการนี้อัตโนมัติ)
+    // อัปเดตสถานะในหน้าเว็บทันที (รายการจะหายจากตารางเพราะ activeAppointments กรองออก)
     const targetItem = appointments.value.find(item => item.appointment_id === appointmentId)
     if (targetItem) {
-      targetItem.status = 'completed'
-    } else {
-      appointments.value = appointments.value.filter(item => item.appointment_id !== appointmentId)
+      targetItem.status = 'cancelled'
     }
-    closeDeleteModal()
 
+    closeDeleteModal()
+    alert('ลบและย้ายข้อมูลไปหน้าประวัติเรียบร้อยแล้ว')
   } catch (error) {
-    alert('เกิดข้อผิดพลาดในการลบ: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
-    console.error('Delete error:', error?.data?.statusMessage || error?.message)
+    alert('เกิดข้อผิดพลาดในการลบ: ' + (error?.data?.detail || error?.message || 'ไม่ทราบสาเหตุ'))
+    console.error('Delete error:', error)
   } finally {
     deletingId.value = null
   }
 }
 
-// ฟังก์ชันเปิด Modal ดูรายละเอียด
+// เปิด Modal ดูรายละเอียด
 const openDetail = (item) => {
   selectedAppointment.value = { ...item }
   showModal.value = true
 }
 
-// ฟังก์ชันปิด Modal ดูรายละเอียด
+// ปิด Modal ดูรายละเอียด
 const closeModal = () => {
   showModal.value = false
   selectedAppointment.value = null
 }
 
-// Status styling
+// จัดการสี Badge สถานะ
 const statusClass = (status) => {
   const classes = {
     active: 'tw-bg-green-100 tw-text-green-700',
@@ -373,6 +451,7 @@ const statusClass = (status) => {
   return classes[status] || 'tw-bg-gray-100 tw-text-gray-700'
 }
 
+// แปลงคำแสดงสถานะ
 const statusLabel = (status) => {
   const labels = {
     active: 'กำลังใช้งาน',
@@ -383,7 +462,7 @@ const statusLabel = (status) => {
   return labels[status] || status || '-'
 }
 
-// Format วันที่ (date only)
+// แปลงรูปแบบวันที่
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
   const date = new Date(dateStr)
@@ -394,10 +473,12 @@ const formatDate = (dateStr) => {
   })
 }
 
-// Format วันที่และเวลา
+// แปลงรูปแบบวันที่และเวลาสร้างรายการ
 const formatDateTime = (dateStr) => {
-  if (!dateStr) return '-'
+  if (!dateStr || dateStr === '-') return '-'
+  // หากสตริงถูกฟอร์แมตมาจาก backend แล้วให้แสดงตรงๆ หรือแปลงตาม Date
   const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return dateStr
   return date.toLocaleDateString('th-TH', {
     year: 'numeric',
     month: 'short',
@@ -413,7 +494,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Modal Transition Animations */
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.25s ease;
