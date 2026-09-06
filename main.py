@@ -1,10 +1,12 @@
+import re
+import secrets
 from datetime import date, datetime
 from typing import Optional
+
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String
-from sqlalchemy.dialects.postgresql import UUID             # เพิ่มการ import UUID สำหรับ PostgreSQL
 from sqlalchemy.orm import Session
 from Database.database import Base, SessionLocal, engine    # ดึง Base และ engine จากโฟลเดอร์ Database
 
@@ -23,11 +25,6 @@ class Appointment(Base):
     status = Column(String, default="active")
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    user_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("hospital_user.user_id"),
-        nullable=True,
-    )
     location_id = Column(
         Integer, ForeignKey("hospital_parking.location_id"), default=1
     )
@@ -57,33 +54,7 @@ def get_db():
         db.close()
 
 
-
-
-# Schema ตัวรับข้อมูลจากฟอร์มหน้าเว็บ
-class AppointmentCreate(BaseModel):
-    patient_name: str
-    phone_number: str
-    license_plate: str
-    dept_id: int  # ใช้ dept_id รับเลข
-    appointment_date: date  # รับวันที่ 
-    time_slot: str  # รับช่วงเวลา 
-    user_id: Optional[str] = (
-        None # ใส่ Optional เพื่อให้ยอมรับค่า null ได้เวลาไม่ได้ล็อกอิน
-    )
-
-
-
-
-# Schema สำหรับ response (แก้ปัญหา serialization ของ datetime)
-class AppointmentResponse(BaseModel):
-    id: int
-    patient_name: str
-    phone_number: str
-    license_plate: str
-    department: str
-    created_at: Optional[datetime] = None
-
-class hospital_dept(Base):
+class HospitalDept(Base):
     __tablename__ = "hospital_dept"
     dept_id = Column(Integer, primary_key=True, index=True)
     dept_code = Column(String)
@@ -96,54 +67,137 @@ class HospitalParking(Base):
     __tablename__ = "hospital_parking"
     location_id = Column(Integer, primary_key=True, index=True)
     building_name = Column(String)
-    parking_floor = Column(String)
     clinic_floor = Column(String)
     map_url = Column(String)
 
-class HospitalUser(Base):
-    __tablename__ = "hospital_user"
-    user_id = Column(UUID(as_uuid=True), primary_key=True, index=True)
-    full_name = Column(String)
-    role = Column(String)
 
 
 
- # API บันทึกข้อมูลใบนัด (POST)
-@app.post("/api/appointments")
+# Schema ตัวรับข้อมูลจากฟอร์มหน้าเว็บ (ตรวจสอบเบื้องต้นด้วย Pydantic)
+class AppointmentCreate(BaseModel):
+    patient_name: str = Field(min_length=1, max_length=100)
+    phone_number: str
+    license_plate: str = Field(min_length=1, max_length=20)
+    dept_id: int = Field(gt=0)
+    appointment_date: date
+    time_slot: str = Field(min_length=1, max_length=30)
+
+
+
+
+# Schema สำหรับ response (แก้ปัญหา serialization ของ datetime + ไม่รั่วไหลคอลัมน์ที่ไม่จำเป็น)
+class AppointmentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    appointment_id: int
+    patient_name: str
+    phone_number: str
+    license_plate: str
+    dept_id: int
+    department: Optional[str] = None
+    status: str
+    created_at: Optional[datetime] = None
+
+
+ALLOWED_TIME_SLOTS = {"09:00 - 12:00", "13:00 - 16:00"}
+
+
+def sanitize_str(value: str) -> str:
+    return (
+        value.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#x27;")
+        .strip()
+    )
+
+
+# API บันทึกข้อมูลใบนัด (POST) พร้อม validate + sanitize ฝั่ง Backend
+@app.post("/api/appointments", response_model=AppointmentResponse)
 def create_appointment(
     payload: AppointmentCreate, db: Session = Depends(get_db)
 ):
-    qr_token = f"QR-{int(datetime.now().timestamp())}"      # สุ่ม Token ทำ QR Code 
+    patient_name = sanitize_str(payload.patient_name)
+    if not patient_name or len(patient_name) > 100:
+        raise HTTPException(
+            status_code=400, detail="ชื่อผู้รับบริการต้องมีความยาว 1-100 ตัวอักษร"
+        )
+
+    phone_number = re.sub(r"[\s-]", "", payload.phone_number)
+    if not re.fullmatch(r"\d{9,10}", phone_number):
+        raise HTTPException(
+            status_code=400, detail="เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก"
+        )
+
+    license_plate = sanitize_str(payload.license_plate)
+    if len(license_plate) > 20:
+        raise HTTPException(
+            status_code=400, detail="ทะเบียนรถต้องไม่เกิน 20 ตัวอักษร"
+        )
+
+    if payload.appointment_date < date.today():
+        raise HTTPException(
+            status_code=400, detail="วันนัดหมายต้องไม่เป็นวันในอดีต"
+        )
+
+    if payload.time_slot not in ALLOWED_TIME_SLOTS:
+        raise HTTPException(
+            status_code=400,
+            detail="ช่วงเวลาต้องเป็น 09:00 - 12:00 หรือ 13:00 - 16:00",
+        )
+
+    dept = (
+        db.query(HospitalDept)
+        .filter(HospitalDept.dept_id == payload.dept_id)
+        .first()
+    )
+    if not dept:
+        raise HTTPException(status_code=400, detail="ไม่พบแผนกที่นัดหมาย")
+
+    qr_token = f"QR-{secrets.token_hex(12).upper()}"      # Token สุ่มจาก os random ไม่ซ้ำและเดายาก
 
     new_item = Appointment(
         qr_token=qr_token,
-        patient_name=payload.patient_name,
-        phone_number=payload.phone_number,
-        license_plate=payload.license_plate,
-        dept_id=payload.dept_id,  # บันทึกเป็น dept_id
+        patient_name=patient_name,
+        phone_number=phone_number,
+        license_plate=license_plate,
+        dept_id=payload.dept_id,
         appointment_date=payload.appointment_date,
         time_slot=payload.time_slot,
         location_id=1,  # ชั้นจอดรถเริ่มต้นตึก PremiumClinic
-        user_id=payload.user_id,
     )
     db.add(new_item)
-    db.commit()
-    db.refresh(new_item)
-    return {"status": "success", "data": new_item}
+    try:
+        db.commit()
+        db.refresh(new_item)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="ไม่สามารถบันทึกข้อมูลได้")
+
+    return AppointmentResponse(
+        appointment_id=new_item.appointment_id,
+        patient_name=new_item.patient_name,
+        phone_number=new_item.phone_number,
+        license_plate=new_item.license_plate,
+        dept_id=new_item.dept_id,
+        department=dept.dept_name_th,
+        status=new_item.status,
+        created_at=new_item.created_at,
+    )
 
 
 
 
 # ==========================================
-# 1. API ดึงรายการใบนัดทั้งหมด (เส้นเดียวจบ ครบทุกสถานะ)
+# 1. API ดึงรายชื่อแผนกทั้งหมด
 # ==========================================
-# ใน main.py: API ดึงรายชื่อแผนกทั้งหมด
 @app.get("/api/departments")
 def get_departments(db: Session = Depends(get_db)):
-    # ใช้ HospitalDept ตัวพิมพ์ใหญ่
-    depts = db.query(hospital_dept).all()
+    try:
+        depts = db.query(HospitalDept).all()
+    except Exception:
+        raise HTTPException(status_code=500, detail="ไม่สามารถดึงข้อมูลแผนกได้")
 
-    # แปลงเป็น List of Dict เพื่อส่งกลับเป็น JSON ที่หน้าบ้านอ่านง่ายแน่นอน
     return [
         {
             "dept_id": d.dept_id,
@@ -171,7 +225,11 @@ def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
 
     # เปลี่ยนสถานะเพื่อเก็บไว้ดูประวัติ
     item.status = "cancelled"
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="ไม่สามารถอัปเดตข้อมูลได้")
     return {
         "status": "success",
         "message": "ย้ายรายการไปที่หน้าประวัติเรียบร้อยแล้ว",
@@ -195,7 +253,11 @@ def restore_appointment(appointment_id: int, db: Session = Depends(get_db)):
 
     # เปลี่ยนสถานะเป็น backup ตามที่ต้องการ
     item.status = "backup"
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="ไม่สามารถอัปเดตข้อมูลได้")
     return {
         "status": "success",
         "message": "กู้คืนรายการเป็นสถานะ backup สำเร็จ",

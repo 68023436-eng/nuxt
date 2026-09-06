@@ -14,5 +14,10 @@ export default defineNuxtConfig({
 
   css: [
     '~/assets/css/tailwind.css'
-  ]
+  ],
+
+  runtimeConfig: {
+    // ใช้สำหรับเซ็นต์ cookie ของ session (ควรตั้ง SESSION_SECRET ใน .env ใน production)
+    sessionSecret: process.env.SESSION_SECRET || 'hc-dev-session-secret'
+  }
 })

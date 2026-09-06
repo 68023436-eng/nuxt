@@ -22,6 +22,8 @@ const PHONE_REGEX = /^\d{9,10}$/
  */
 export default defineEventHandler(async (event) => {
   try {
+    requirePermission(event, 'create')
+
     const body = await readBody(event)
 
     // === Input Validation ===
@@ -141,9 +143,30 @@ export default defineEventHandler(async (event) => {
 
     if (error) {
       console.error('Server insert error details:', error)
+
+      // FK error → คืน 400 ข้อความภาษาไทยที่ชัดเจน (ไม่รั่วรายละเอียดจาก DB)
+      const msg = error.message || ''
+      if (msg.includes('appointments_dept_id_fkey')) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'แผนกที่เลือกไม่มีในระบบ กรุณาเลือกแผนกจากแบบฟอร์ม',
+        })
+      }
+      if (msg.includes('appointments_location_id_fkey')) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'สถานที่จอดรถที่เลือกไม่มีในระบบ',
+        })
+      }
+      if (msg.toLowerCase().includes('row-level security')) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'ฐานข้อมูลปิดกั้นการบันทึก (RLS) — ให้ผู้ดูแลรัน “.venv/bin/python scripts/setup_access.py” เพื่อกู้คืนสิทธิ์',
+        })
+      }
       throw createError({
         statusCode: 500,
-        statusMessage: `ไม่สามารถบันทึกข้อมูลได้: ${error.message}`,
+        statusMessage: 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
       })
     }
 

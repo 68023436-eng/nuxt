@@ -47,10 +47,10 @@ const checkSupabase = async () => {
     const result = await $fetch('/api/health')
 
     isSuccess.value = true
-    statusMessage.value = `✅ เชื่อมต่อกับ Supabase สำเร็จเรียบร้อย! (พบ ${result.count ?? 0} รายการ)`
+    statusMessage.value = `เชื่อมต่อกับ Supabase สำเร็จเรียบร้อย! (พบ ${result.count ?? 0} รายการ)`
   } catch (err) {
     isSuccess.value = false
-    statusMessage.value = `❌ เชื่อมต่อล้มเหลว: ${err?.data?.statusMessage || err?.message || err}`
+    statusMessage.value = `เชื่อมต่อล้มเหลว: ${err?.data?.statusMessage || err?.message || err}`
     console.error('Supabase Health Check Error:', err)
   } finally {
     loading.value = false

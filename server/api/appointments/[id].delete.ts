@@ -2,6 +2,8 @@ import { serverSupabaseClient } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
   try {
+    requirePermission(event, 'cancel')
+
     // ดึง ID จาก URL parameter
     const id = getRouterParam(event, 'id')
 
