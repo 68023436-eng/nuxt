@@ -105,6 +105,7 @@
                     ดูเพิ่มเติม
                   </button>
                   <button 
+                    v-if="canCancel"
                     @click="askDeleteAppointment(item)"
                     :disabled="deletingId === item.appointment_id"
                     class="tw-bg-red-500 hover:tw-bg-red-600 disabled:tw-bg-gray-300 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
@@ -349,6 +350,8 @@
 // ============================================================
 
 const { statusClass, statusLabel, formatDate, formatDateTime } = useAppointment()
+
+const { canCancel } = useSession()
 
 // ============================================================
 // State

@@ -124,6 +124,12 @@
 
 <script setup>
 // ============================================================
+// สิทธิ์เข้าถึง: เฉพาะ Clinic_staff / Admin เท่านั้นที่กรอกข้อมูลได้
+// ============================================================
+
+const { canCreate, refresh } = useSession()
+
+// ============================================================
 // State
 // ============================================================
 
@@ -140,12 +146,12 @@ const departmentList = ref([])
 const isSubmitting = ref(false)
 
 // ============================================================
-// ดึงข้อมูลแผนกจาก FastAPI Backend
+// ดึงข้อมูลแผนกจาก Supabase (ผ่าน Nuxt Server API)
 // ============================================================
 
 const fetchDepartments = async () => {
   try {
-    const data = await $fetch('http://localhost:8000/api/departments')
+    const data = await $fetch('/api/departments')
     departmentList.value = data
   } catch (error) {
     console.error('โหลดข้อมูลแผนกไม่สำเร็จ:', error)
@@ -190,7 +196,15 @@ const handleSubmit = async () => {
 // Lifecycle
 // ============================================================
 
-onMounted(() => {
+onMounted(async () => {
+  // รอ session โหลดก่อนตัดสินใจ (กัน redirect ผิดพลาด)
+  await refresh()
+
+  // ผู้ที่ไม่มีสิทธิ์สร้างใบนัด → ส่งกลับไปหน้ารายการนัด
+  if (!canCreate.value) {
+    navigateTo('/appointments')
+    return
+  }
   fetchDepartments()
 })
 </script>

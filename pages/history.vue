@@ -102,6 +102,7 @@
                   </button>
                   <!-- ปุ่มกู้กลับ -->
                   <button 
+                    v-if="canRestore"
                     @click="askRestoreAppointment(item)"
                     :disabled="restoringId === item.appointment_id"
                     class="tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-300 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors tw-shadow-sm tw-flex tw-items-center tw-gap-1"
@@ -315,6 +316,8 @@
 // ============================================================
 
 const { statusClass, statusLabel, formatDate } = useAppointment()
+
+const { canRestore } = useSession()
 
 // ============================================================
 // State
