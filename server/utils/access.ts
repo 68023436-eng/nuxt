@@ -45,12 +45,12 @@ export function isAccessRole(value: unknown): value is AccessRole {
   return typeof value === 'string' && (ALL_ROLES as string[]).includes(value)
 }
 
-export function sealSession(session: AccessSession): string {
+export function sealAccessSession(session: AccessSession): string {
   const body = Buffer.from(JSON.stringify(session)).toString('base64url')
   return `${body}.${sign(body)}`
 }
 
-export function unsealSession(token: string | undefined | null): AccessSession | null {
+export function unsealAccessSession(token: string | undefined | null): AccessSession | null {
   if (!token) return null
   const parts = token.split('.')
   if (parts.length !== 2) return null
@@ -69,11 +69,11 @@ export function unsealSession(token: string | undefined | null): AccessSession |
 }
 
 export function getAccessSession(event: any): AccessSession | null {
-  return unsealSession(getCookie(event, ACCESS_COOKIE))
+  return unsealAccessSession(getCookie(event, ACCESS_COOKIE))
 }
 
 export function setAccessSession(event: any, session: AccessSession): void {
-  setCookie(event, ACCESS_COOKIE, sealSession(session), {
+  setCookie(event, ACCESS_COOKIE, sealAccessSession(session), {
     httpOnly: true,
     sameSite: 'lax',
     secure: getRequestProtocol(event) === 'https',

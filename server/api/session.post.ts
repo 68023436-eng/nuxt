@@ -42,12 +42,14 @@ export default defineEventHandler(async (event) => {
     }
 
     // 2. เจ้าหน้าที่ต้องมีชื่อ + role ตรงกับข้อมูลใน hospital_user (อ้างอิงจาก Supabase)
+    //    และต้องยัง active อยู่ (admin ปิดใช้งานแล้ว login ไม่ได้) — เผื่อ is_active เป็น NULL ให้ถือว่าใช้ได้
     if (role !== 'Patient') {
       const client = await serverSupabaseClient(event)
       const { data: users, error: userErr } = await client
         .from('hospital_user')
         .select('full_name, role')
         .eq('role', role)
+        .or('is_active.is.null,is_active.eq.true')
 
       if (userErr) {
         console.error('Hospital user lookup error:', userErr.message)

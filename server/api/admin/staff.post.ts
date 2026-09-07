@@ -1,8 +1,6 @@
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
-import { ROLE_LABELS } from '~/constants/roles'
+import { ROLE_LABELS, STAFF_ROLES } from '~/constants/roles'
 import type { AccessRole } from '~/constants/roles'
-
-const STAFF_ROLES: AccessRole[] = ['Admin', 'Clinic_staff', 'Security_guard']
 
 /**
  * POST /api/admin/staff

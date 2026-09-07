@@ -15,13 +15,21 @@
       <!-- เมนูนำทาง -->
       <div class="tw-flex tw-flex-col tw-items-center tw-mt-10 tw-gap-2">
         <button 
+          v-if="isGuard || asAdmin"
+          @click="goTo('verify')" 
+          class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
+        >
+          ตรวจสอบ QR
+        </button>
+        <button 
+          v-if="!isGuard"
           @click="goTo('appointment')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >
           ใบนัดหมาย
         </button>
         <button 
-          v-if="canCreate"
+          v-if="canCreate && !isGuard"
           @click="goTo('form')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >
@@ -69,7 +77,9 @@
 // Navigation
 // ============================================================
 
-const { session, roleLabel, canCreate, asAdmin, refresh, logout } = useSession()
+const { session, role, roleLabel, canCreate, asAdmin, refresh, logout } = useSession()
+
+const isGuard = computed(() => role.value === 'Security_guard')
 
 onMounted(() => {
   refresh()
@@ -82,11 +92,18 @@ const handleLogout = async () => {
 
 const goTo = (pageName) => {
   const routes = {
+    verify: '/verify',
     appointment: '/appointments',
     form: '/patient-form',
     history: '/history',
     manageStaff: '/admin/staff',
     main: '/',
+  }
+
+  // รปภ. ไปหน้าแรก → ไปที่ "ตรวจสอบ QR" แทน (ไม่ให้เห็นหน้า dashboard/ข้อมูลนัดหมาย)
+  if (pageName === 'main' && isGuard.value) {
+    navigateTo('/verify')
+    return
   }
 
   if (routes[pageName]) {

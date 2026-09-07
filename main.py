@@ -1,6 +1,6 @@
 import re
 import secrets
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -9,6 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Session
 from Database.database import Base, SessionLocal, engine    # ดึง Base และ engine จากโฟลเดอร์ Database
+
+
+def utcnow() -> datetime:
+    """UTC time แบบ naive (แทน datetime.utcnow ที่ถูก deprecate ใน Python 3.12)"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
 
 # โครงสร้างตารางใน Database (เพิ่ม phone_number และ department แล้ว)
 class Appointment(Base):
@@ -23,7 +29,7 @@ class Appointment(Base):
     appointment_date = Column(Date, nullable=False)
     time_slot = Column(String, nullable=False)
     status = Column(String, default="active")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
     deleted_at = Column(DateTime, default=None, nullable=True)  # เวลาที่ลบ (ข้อมูลจะถูกลบถาวรหลัง 30 วัน)
 
     location_id = Column(
@@ -235,7 +241,7 @@ def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
 
     # เก็บ deleted_at เพื่อใช้ระบบลบข้อมูลหลังครบ 30 วัน
     item.status = "cancelled"
-    item.deleted_at = datetime.utcnow()
+    item.deleted_at = utcnow()
     try:
         db.commit()
     except Exception:
@@ -283,7 +289,7 @@ def restore_appointment(appointment_id: int, db: Session = Depends(get_db)):
 # ==========================================
 @app.post("/api/cleanup/purge")
 def purge_expired_records(db: Session = Depends(get_db)):
-    cutoff = datetime.utcnow()
+    cutoff = utcnow()
     expired = []
     rows = (
         db.query(Appointment)

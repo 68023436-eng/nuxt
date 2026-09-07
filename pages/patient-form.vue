@@ -179,7 +179,7 @@ const handleSubmit = async () => {
       patient_name: '',
       phone_number: '',
       license_plate: '',
-      dept_id: '',
+      dept_id: null,
       appointment_date: '',
       time_slot: '',
     }
