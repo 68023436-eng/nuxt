@@ -33,6 +33,13 @@
         >
           ประวัติ
         </button>
+        <button 
+          v-if="asAdmin"
+          @click="goTo('manageStaff')" 
+          class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
+        >
+          จัดการเจ้าหน้าที่
+        </button>
       </div>
     </div>      
 
@@ -62,7 +69,7 @@
 // Navigation
 // ============================================================
 
-const { session, roleLabel, canCreate, refresh, logout } = useSession()
+const { session, roleLabel, canCreate, asAdmin, refresh, logout } = useSession()
 
 onMounted(() => {
   refresh()
@@ -78,6 +85,7 @@ const goTo = (pageName) => {
     appointment: '/appointments',
     form: '/patient-form',
     history: '/history',
+    manageStaff: '/admin/staff',
     main: '/',
   }
 

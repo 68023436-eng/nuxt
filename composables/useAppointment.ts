@@ -37,12 +37,12 @@ export const useAppointment = () => {
     })
   }
 
-  /** แปลงรูปแบบวันที่ + เวลา เช่น "05/09/2026 14:30" */
+  /** แปลงรูปแบบวันที่ + เวลา เช่น "5 ก.ย. 2569 14:30" */
   const formatDateTime = (dateStr: string | null): string => {
     if (!dateStr || dateStr === '-') return '-'
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) return dateStr
-    return date.toLocaleDateString('th-TH', {
+    return date.toLocaleString('th-TH', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -51,10 +51,35 @@ export const useAppointment = () => {
     })
   }
 
+  const RETENTION_DAYS = 30
+
+  /** คำนวณจำนวนวันทีเหลือก่อนข้อมูลจะถูกลบถาวร (จาก deleted_at) */
+  const daysUntilPurge = (deletedAt: string | null, daysUntilPurgeFromServer?: number | null): number | null => {
+    if (deletedAt && typeof daysUntilPurgeFromServer === 'number') {
+      return daysUntilPurgeFromServer
+    }
+    if (!deletedAt) return null
+    const deletedTime = new Date(deletedAt).getTime()
+    if (isNaN(deletedTime)) return null
+    const remaining = RETENTION_DAYS * 24 * 60 * 60 * 1000 - (Date.now() - deletedTime)
+    return Math.max(0, Math.ceil(remaining / (24 * 60 * 60 * 1000)))
+  }
+
+  /** ข้อความอธิบายวันเหลือก่อนลบถาวร */
+  const purgeNotice = (deletedAt: string | null, daysUntilPurgeFromServer?: number | null): string => {
+    if (!deletedAt) return ''
+    const days = daysUntilPurge(deletedAt, daysUntilPurgeFromServer)
+    if (days === null) return ''
+    if (days <= 0) return 'ข้อมูลกำลังจะถูกลบออกจากระบบอัตโนมัติ'
+    return `ข้อมูลจะถูกลบออกจากระบบอัตโนมัติใน ${days} วัน`
+  }
+
   return {
     statusClass,
     statusLabel,
     formatDate,
     formatDateTime,
+    daysUntilPurge,
+    purgeNotice,
   }
 }

@@ -4,22 +4,74 @@
     <Sidebar />
 
     <!-- Main Content -->
-    <div class="tw-flex-1 tw-p-8">
+    <div class="tw-flex-1 tw-min-w-0 tw-p-4 md:tw-p-8">
       <!-- Header Banner พร้อมปุ่มรีเฟรช -->
-      <div class="tw-flex tw-justify-between tw-items-center tw-bg-purple-100 tw-border-l-8 tw-border-l-purple-600 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
+      <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-purple-100 tw-border-l-8 tw-border-l-purple-600 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
         <div>
           <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">การเก็บประวัตินัดหมาย</h1>
           <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Appointments History</p>
         </div>
 
         <!-- ปุ่มรีเฟรชข้อมูล -->
-        <button 
-          @click="fetchHistory" 
-          :disabled="loading"
-          class="tw-bg-white hover:tw-bg-purple-50 disabled:tw-bg-gray-100 tw-text-purple-800 tw-border tw-border-purple-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
-        >
-          <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชประวัติ' }}</span>
-        </button>
+        <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+          <button 
+            v-if="canManage"
+            @click="purgeExpired"
+            :disabled="purging"
+            class="tw-bg-white hover:tw-bg-red-50 disabled:tw-bg-gray-100 tw-text-red-600 tw-border tw-border-red-200 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
+          >
+            <span>{{ purging ? 'กำลังล้าง...' : 'ล้างข้อมูลที่หมดอายุ' }}</span>
+          </button>
+          <button 
+            @click="fetchHistory" 
+            :disabled="loading"
+            class="tw-bg-white hover:tw-bg-purple-50 disabled:tw-bg-gray-100 tw-text-purple-800 tw-border tw-border-purple-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
+          >
+            <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชประวัติ' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ระบบลบแบบเก็บ 30 วัน -->
+      <div class="tw-mb-6 tw-bg-indigo-50 tw-border tw-border-indigo-200 tw-p-4 tw-rounded-xl tw-text-indigo-800 tw-text-sm tw-flex tw-items-start tw-gap-3">
+        <div>
+          <p class="tw-text-indigo-600 tw-mt-0.5">
+            รายการที่ถูกลบจะอยู่ในประวัติเป็นเวลา 30 วัน (1 เดือน) 
+            ซึ่งสามารถกู้คืนได้ตลอดช่วงเวลานี้ หากครบ 30 วัน ข้อมูลจะถูกลบออกจากระบบอัตโนมัติโดยไม่สามารถกู้คืนได้อีก
+          </p>
+        </div>
+      </div>
+
+      <!-- Action bar: กู้คืนแบบกลุ่ม (เลือกหลายรายการ / กู้คืนทั้งหมด) -->
+      <div v-if="canRestore && historyAppointments.length > 0" class="tw-mb-6 tw-bg-white tw-border tw-border-slate-200 tw-rounded-xl tw-p-4 tw-shadow-sm">
+        <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+          <div class="tw-w-full sm:tw-w-auto tw-text-sm tw-text-gray-700">
+            <span class="tw-font-semibold">กู้คืนข้อมูล</span>
+            <span class="tw-text-gray-400 tw-ml-1">เลือกในตารางเพื่อกู้คืนพร้อมกัน หรือกู้คืนทั้งหมด</span>
+          </div>
+          <div class="tw-flex-1 tw-hidden sm:tw-block"></div>
+          <button
+            :disabled="selectedIds.length === 0 || restoringAll"
+            @click="askBatchRestore(selectedIds, 'selected')"
+            class="tw-w-full sm:tw-w-auto tw-bg-indigo-600 hover:tw-bg-indigo-700 disabled:tw-bg-gray-300 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-transition-colors"
+          >
+            กู้คืนที่เลือก (<span class="tw-font-bold">{{ selectedIds.length }}</span>)
+          </button>
+          <button
+            :disabled="historyAppointments.length === 0 || restoringAll"
+            @click="askBatchRestore(historyAppointments.map(a => a.appointment_id), 'all')"
+            class="tw-w-full sm:tw-w-auto tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-300 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-transition-colors"
+          >
+            กู้คืนทั้งหมด (<span class="tw-font-bold">{{ historyAppointments.length }}</span>)
+          </button>
+          <button
+            v-if="selectedIds.length > 0"
+            @click="selectedIds = []"
+            class="tw-text-sm tw-text-gray-500 hover:tw-text-gray-700 tw-underline tw-whitespace-nowrap"
+          >
+            ล้างการเลือก
+          </button>
+        </div>
       </div>
 
       <!-- Success Notification Toast -->
@@ -44,54 +96,86 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="historyAppointments.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-12 tw-rounded-2xl tw-text-center">
+      <div v-else-if="historyAppointments.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-8 sm:tw-p-12 tw-rounded-2xl tw-text-center">
         <p class="tw-text-gray-400 tw-text-lg">ยังไม่มีรายการประวัติที่ถูกลบหรือยกเลิก</p>
         <p class="tw-text-gray-400 tw-text-sm tw-mt-1">รายการนัดหมายที่ถูกลบออกจากหน้ารายการนัดหมายจะมาแสดงที่นี่</p>
       </div>
 
       <!-- Data Table -->
       <div v-else class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-100 tw-overflow-hidden">
-        <table class="tw-w-full tw-text-sm tw-text-left">
+        <div class="tw-overflow-x-auto">
+        <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[1020px]">
           <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
             <tr>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ลำดับ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ชื่อผู้ป่วย / เบอร์โทร</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ทะเบียนรถ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">แผนกตรวจ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วันและเวลานัดหมาย</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">สถานะ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-text-center">จัดการ</th>
+              <th v-if="canRestore" class="tw-px-5 tw-py-4 tw-w-10">
+                <input
+                  type="checkbox"
+                  :checked="allItemsSelected"
+                  @change="toggleSelectAll"
+                  class="tw-w-4 tw-h-4 tw-accent-indigo-600 tw-cursor-pointer"
+                />
+              </th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">ลำดับ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[220px]">ชื่อผู้ป่วย / เบอร์โทร</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[130px]">ทะเบียนรถ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">แผนกตรวจ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">วันและเวลานัดหมาย</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[210px]">ลบถาวรเมื่อครบ 30 วัน</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px] tw-text-center">จัดการ</th>
             </tr>
           </thead>
           <tbody>
             <tr 
               v-for="(item, index) in historyAppointments" 
               :key="item.appointment_id"
-              class="tw-border-b tw-border-slate-100 hover:tw-bg-slate-50 tw-transition-colors"
+              :class="[
+                'tw-border-b tw-border-slate-100 tw-transition-colors',
+                isSelected(item.appointment_id) ? 'tw-bg-indigo-50/70' : 'hover:tw-bg-slate-50'
+              ]"
             >
-              <td class="tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
-              <td class="tw-px-5 tw-py-4">
-                <div class="tw-font-medium tw-text-gray-800">{{ item.patient_name }}</div>
-                <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5">{{ item.phone_number || '-' }}</div>
+              <td v-if="canRestore" class="tw-px-5 tw-py-4 tw-w-10">
+                <input
+                  type="checkbox"
+                  :checked="isSelected(item.appointment_id)"
+                  @change="toggleSelect(item)"
+                  class="tw-w-4 tw-h-4 tw-accent-indigo-600 tw-cursor-pointer"
+                />
               </td>
+              <td class="tw-px-5 tw-py-4 tw-text-gray-500 tw-whitespace-nowrap">{{ index + 1 }}</td>
               <td class="tw-px-5 tw-py-4">
+                <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[210px]" :title="item.patient_name">{{ item.patient_name }}</div>
+                <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</div>
+              </td>
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
                 <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
                   {{ item.license_plate }}
                 </span>
               </td>
               <td class="tw-px-5 tw-py-4 tw-text-gray-700">
-                {{ item.department_name || item.dept_id || '-' }}
+                <span class="tw-line-clamp-2">{{ item.department_name || item.dept_id || '-' }}</span>
               </td>
-              <td class="tw-px-5 tw-py-4">
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
                 <div class="tw-text-gray-700">{{ formatDate(item.appointment_date) }}</div>
-                <div class="tw-text-xs tw-text-purple-600 tw-font-medium">{{ item.time_slot }}</div>
+                <div class="tw-text-xs tw-text-purple-600 tw-font-medium tw-mt-0.5">{{ item.time_slot }}</div>
               </td>
-              <td class="tw-px-5 tw-py-4">
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
                 <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
                   {{ statusLabel(item.status) }}
                 </span>
               </td>
-              <td class="tw-px-5 tw-py-4 tw-text-center">
+              <td class="tw-px-5 tw-py-4">
+                <template v-if="item.deleted_at">
+                  <div class="tw-text-xs tw-text-gray-500 tw-whitespace-nowrap">ลบเมื่อ {{ formatDateTime(item.deleted_at) }}</div>
+                  <div class="tw-text-xs tw-font-semibold tw-mt-0.5 tw-whitespace-nowrap" :class="daysUntilPurge(item.deleted_at, item.days_until_purge) !== null && daysUntilPurge(item.deleted_at, item.days_until_purge) <= 7 ? 'tw-text-red-600' : 'tw-text-indigo-600'">
+                    {{ purgeNotice(item.deleted_at, item.days_until_purge) }}
+                  </div>
+                </template>
+                <template v-else>
+                  <span class="tw-text-xs tw-text-gray-400 tw-whitespace-nowrap">-</span>
+                </template>
+              </td>
+              <td class="tw-px-5 tw-py-4 tw-text-center tw-whitespace-nowrap">
                 <div class="tw-flex tw-justify-center tw-gap-2">
                   <!-- ปุ่มดูเพิ่มเติม -->
                   <button 
@@ -114,6 +198,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <!-- Summary -->
         <div class="tw-px-6 tw-py-3 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-sm tw-text-gray-500">
@@ -131,7 +216,7 @@
         >
           <div class="tw-fixed tw-inset-0 tw-bg-black/50 tw-backdrop-blur-sm" @click="closeModal"></div>
 
-          <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-lg tw-overflow-hidden tw-transform tw-transition-all">
+          <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-lg tw-overflow-hidden tw-transform tw-transition-all tw-max-h-[90vh] tw-flex tw-flex-col">
             <!-- Modal Header -->
             <div class="tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-600 tw-px-6 tw-py-4">
               <div class="tw-flex tw-items-center tw-justify-between">
@@ -146,7 +231,7 @@
             </div>
 
             <!-- Modal Body -->
-            <div v-if="selectedAppointment" class="tw-px-6 tw-py-5 tw-space-y-4">
+            <div v-if="selectedAppointment" class="tw-px-6 tw-py-5 tw-space-y-4 tw-overflow-y-auto">
               <!-- Appointment ID -->
               <div class="tw-flex tw-items-start tw-gap-3">
                 <div class="tw-w-8 tw-h-8 tw-bg-slate-100 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
@@ -247,6 +332,18 @@
                   </span>
                 </div>
               </div>
+
+              <!-- กำหนดการลบถาวร -->
+              <div v-if="selectedAppointment.deleted_at" class="tw-flex tw-items-start tw-gap-3">
+                <div class="tw-w-8 tw-h-8 tw-bg-rose-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
+                  <span class="tw-text-rose-500 tw-text-sm">🗑️</span>
+                </div>
+                <div>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">การลบถาวร</p>
+                  <p class="tw-text-gray-800 tw-font-semibold">{{ purgeNotice(selectedAppointment.deleted_at, selectedAppointment.days_until_purge) }}</p>
+                  <p class="tw-text-xs tw-text-gray-500 tw-mt-0.5">ถูกลบเมื่อ {{ formatDateTime(selectedAppointment.deleted_at) }}</p>
+                </div>
+              </div>
             </div>
 
             <!-- Modal Footer -->
@@ -272,7 +369,7 @@
         >
           <div class="tw-fixed tw-inset-0 tw-bg-black/50 tw-backdrop-blur-sm" @click="closeRestoreModal"></div>
 
-          <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-md tw-overflow-hidden tw-transform tw-transition-all">
+          <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-md tw-overflow-hidden tw-transform tw-transition-all tw-max-h-[90vh] tw-overflow-y-auto">
             <div class="tw-p-6 tw-text-center">
               <h3 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">ยืนยันการกู้คืนข้อมูล</h3>
               <p class="tw-text-sm tw-text-gray-600 tw-mb-4">
@@ -281,7 +378,8 @@
                 (ID: {{ itemToRestore?.appointment_id }}) กลับไปยังหน้ารายการนัดหมายใช่หรือไม่?
               </p>
               <p class="tw-text-xs tw-text-purple-700 tw-bg-purple-50 tw-p-3 tw-rounded-xl tw-border tw-border-purple-200">
-                เมื่อกู้คืนแล้ว สถานะรายการจะถูกเปลี่ยนเป็น <strong>"ข้อมูล backup"</strong> และนำกลับไปแสดงในหน้ารายการนัดหมายทันที
+                เมื่อกู้คืนแล้ว สถานะรายการจะถูกเปลี่ยนเป็น <strong>"ข้อมูล backup"</strong> และนำกลับไปแสดงในหน้ารายการนัดหมายทันที 
+                พร้อมกับหยุดนับเวลาการลบถาวร (ข้อมูลจะไม่ถูกลบออกโดยอัตโนมัติอีกต่อไป)
               </p>
             </div>
 
@@ -307,6 +405,51 @@
       </Transition>
     </Teleport>
 
+    <!-- ======= Batch Restore Confirm Modal ======= -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div 
+          v-if="showBatchRestoreModal" 
+          class="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-p-4"
+        >
+          <div class="tw-fixed tw-inset-0 tw-bg-black/50 tw-backdrop-blur-sm" @click="closeBatchRestoreModal"></div>
+
+          <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-md tw-overflow-hidden tw-transform tw-transition-all tw-max-h-[90vh] tw-overflow-y-auto">
+            <div class="tw-p-6 tw-text-center">
+              <h3 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">ยืนยันการกู้คืนข้อมูล{{ batchRestoreMode === 'all' ? 'ทั้งหมด' : 'ที่เลือก' }}</h3>
+              <p class="tw-text-sm tw-text-gray-600 tw-mb-4">
+                คุณต้องการกู้คืนรายการนัดหมายทั้งหมด
+                <strong class="tw-text-indigo-700 tw-font-semibold">{{ batchRestoreIds.length }} รายการ</strong>
+                กลับไปยังหน้ารายการนัดหมายใช่หรือไม่?
+              </p>
+              <p class="tw-text-xs tw-text-purple-700 tw-bg-purple-50 tw-p-3 tw-rounded-xl tw-border tw-border-purple-200">
+                เมื่อกู้คืนแล้ว รายการทั้งหมดจะถูกเปลี่ยนเป็น <strong>"ข้อมูล backup"</strong> และนำกลับไปแสดงในหน้ารายการนัดหมายทันที 
+                พร้อมกับหยุดนับเวลาการลบถาวร (ข้อมูลจะไม่ถูกลบออกโดยอัตโนมัติอีกต่อไป)
+              </p>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="tw-px-6 tw-py-4 tw-bg-slate-50 tw-border-t tw-border-slate-100 tw-flex tw-justify-end tw-gap-3">
+              <button 
+                @click="closeBatchRestoreModal"
+                :disabled="restoringAll"
+                class="tw-bg-slate-200 hover:tw-bg-slate-300 disabled:tw-opacity-50 tw-text-gray-700 tw-font-medium tw-py-2 tw-px-4 tw-rounded-lg tw-text-sm tw-transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button 
+                @click="confirmBatchRestore"
+                :disabled="restoringAll"
+                class="tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-medium tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm tw-transition-colors tw-shadow-sm"
+              >
+                {{ restoringAll ? 'กำลังกู้คืน...' : 'ยืนยันกู้คืนข้อมูล' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
   </div>
 </template>
 
@@ -315,9 +458,9 @@
 // Composables
 // ============================================================
 
-const { statusClass, statusLabel, formatDate } = useAppointment()
+const { statusClass, statusLabel, formatDate, formatDateTime, daysUntilPurge, purgeNotice } = useAppointment()
 
-const { canRestore } = useSession()
+const { canRestore, canManage } = useSession()
 
 // ============================================================
 // State
@@ -327,12 +470,46 @@ const appointments = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
 const restoringId = ref(null)
+const purging = ref(false)
 const toastMsg = ref('')
+
+// State สำหรับเลือกหลายรายการเพื่อกู้คืนพร้อมกัน
+const selectedIds = ref([])
+const restoringAll = ref(false)
+
+// Batch Restore Confirm Modal State
+const showBatchRestoreModal = ref(false)
+const batchRestoreIds = ref([])
+const batchRestoreMode = ref('selected')
 
 // กรองเอาเฉพาะรายการที่ถูกยกเลิก (cancelled) หรือเสร็จสิ้น (completed)
 const historyAppointments = computed(() => {
   return appointments.value.filter(item => item.status === 'cancelled' || item.status === 'completed')
 })
+
+// เลือกครบทุกแถวในตารางหรือยัง
+const allItemsSelected = computed(() => {
+  return historyAppointments.value.length > 0 &&
+    historyAppointments.value.every(a => isSelected(a.appointment_id))
+})
+
+// ============================================================
+// ระบบเลือกหลายรายการ (checkbox)
+// ============================================================
+
+const isSelected = (id) => selectedIds.value.includes(id)
+
+const toggleSelect = (item) => {
+  const idx = selectedIds.value.indexOf(item.appointment_id)
+  if (idx >= 0) selectedIds.value.splice(idx, 1)
+  else selectedIds.value.push(item.appointment_id)
+}
+
+const toggleSelectAll = () => {
+  selectedIds.value = allItemsSelected.value
+    ? []
+    : historyAppointments.value.map(a => a.appointment_id)
+}
 
 // Detail Modal State
 const showModal = ref(false)
@@ -356,6 +533,77 @@ const fetchHistory = async () => {
     errorMsg.value = error?.data?.statusMessage || error?.message || 'ไม่สามารถดึงข้อมูลประวัติได้'
   } finally {
     loading.value = false
+  }
+}
+
+// ============================================================
+// Purge: ลบข้อมูลที่หมดอายุ (Deleted > 30 วัน) ออกจากระบบ
+// ============================================================
+
+const purgeExpired = async () => {
+  purging.value = true
+  try {
+    const res = await $fetch('/api/cleanup/purge', { method: 'POST' })
+    toastMsg.value = res?.message || 'ล้างข้อมูลที่หมดอายุแล้ว'
+    await fetchHistory()
+    setTimeout(() => {
+      toastMsg.value = ''
+    }, 4000)
+  } catch (error) {
+    alert('เกิดข้อผิดพลาดในการล้างข้อมูล: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
+    console.error('Purge error:', error)
+  } finally {
+    purging.value = false
+  }
+}
+
+// ============================================================
+// Batch Restore: กู้คืนหลายรายการพร้อมกัน / กู้คืนทั้งหมด
+// ============================================================
+
+const showToast = (msg) => {
+  toastMsg.value = msg
+  setTimeout(() => {
+    toastMsg.value = ''
+  }, 4000)
+}
+
+const askBatchRestore = (ids, mode = 'selected') => {
+  if (!ids || ids.length === 0) return
+  batchRestoreIds.value = [...ids]
+  batchRestoreMode.value = mode
+  showBatchRestoreModal.value = true
+}
+
+const closeBatchRestoreModal = () => {
+  showBatchRestoreModal.value = false
+  batchRestoreIds.value = []
+}
+
+const confirmBatchRestore = async () => {
+  if (batchRestoreIds.value.length === 0) return
+
+  restoringAll.value = true
+  try {
+    const res = await $fetch('/api/appointments/restore-batch', {
+      method: 'POST',
+      body: { ids: batchRestoreIds.value },
+    })
+    const count = res?.count || 0
+
+    // อัปเดตฝั่งหน้าเว็บให้รายการที่กู้คืนหลุดจากตารางประวัติทันที
+    const restoredSet = new Set(batchRestoreIds.value)
+    appointments.value = appointments.value
+      .filter(i => !restoredSet.has(i.appointment_id))
+
+    selectedIds.value = []
+    closeBatchRestoreModal()
+    showToast(`กู้คืนข้อมูลสำเร็จ ${count} รายการ! สถานะเปลี่ยนเป็น "ข้อมูล backup"`)
+  } catch (error) {
+    alert('เกิดข้อผิดพลาดในการกู้คืน: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
+    console.error('Batch restore error:', error)
+  } finally {
+    restoringAll.value = false
   }
 }
 
@@ -425,6 +673,10 @@ const closeModal = () => {
 
 onMounted(() => {
   fetchHistory()
+  // ถ้าเป็น Admin จะล้างข้อมูลที่หมดอายุทิ้งให้อัตโนมัติตอนเข้าเพจ
+  if (canManage.value) {
+    purgeExpired()
+  }
 })
 </script>
 

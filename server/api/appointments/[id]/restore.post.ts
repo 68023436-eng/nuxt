@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
     // ตรวจสอบว่ามี record อยู่จริงก่อนกู้คืน
     const { data: existing, error: findError } = await client
       .from('appointments')
-      .select('appointment_id, status')
+      .select('appointment_id, status, deleted_at')
       .eq('appointment_id', numericId)
       .single()
 
@@ -32,10 +32,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // อัปเดตสถานะเป็น 'backup' (ข้อมูล backup)
+    // อัปเดตสถานะเป็น 'backup' (ข้อมูล backup) และล้าง deleted_at ออก เพื่อไม่ให้ถูกนับว่าถูกลบ
     const { data: updated, error: updateError } = await client
       .from('appointments')
-      .update({ status: 'backup' })
+      .update({ status: 'backup', deleted_at: null })
       .eq('appointment_id', numericId)
       .select()
 

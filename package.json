@@ -19,5 +19,8 @@
   "devDependencies": {
     "@nuxtjs/supabase": "^2.0.10",
     "sass-embedded": "^1.97.3"
+  },
+  "resolutions": {
+    "cookie": "0.7.2"
   }
 }
