@@ -19,12 +19,7 @@ logs
 .idea
 
 # Local env files
-.env
-.env.*
-!.env.example
-.venv
-.venv*
-venv
+
 
 # Generated build artifacts
 *.d.ts

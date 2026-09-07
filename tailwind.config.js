@@ -14,6 +14,8 @@ module.exports = {
 
     './plugins/**/*.{js,ts}',
 
+    './constants/**/*.{js,ts}',
+
     './nuxt.config.{js,ts}',
 
   ],

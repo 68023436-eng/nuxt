@@ -28,8 +28,15 @@ export const ROLE_DESCRIPTIONS: Record<AccessRole, string> = {
 }
 
 export const ROLE_COLORS: Record<AccessRole, string> = {
-  Admin: 'tw-from-orange-400 tw-to-red-500',
+  Admin: 'tw-from-emerald-400 tw-to-green-500',
   Clinic_staff: 'tw-from-emerald-400 tw-to-green-500',
-  Security_guard: 'tw-from-blue-400 tw-to-indigo-500',
-  Patient: 'tw-from-violet-400 tw-to-purple-500',
+  Security_guard: 'tw-from-emerald-400 tw-to-green-500',
+  Patient: 'tw-from-emerald-400 tw-to-green-500',
+}
+
+export const ROLE_ICONS: Record<AccessRole, string> = {
+  Admin: '👑',
+  Clinic_staff: '🩺',
+  Security_guard: '🛡️',
+  Patient: '👤',
 }

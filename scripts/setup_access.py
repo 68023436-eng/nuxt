@@ -22,6 +22,9 @@ load_dotenv(os.path.join(os.path.dirname(__file__), os.pardir, ".env"))
 PLANS = {
     "hospital_user": [
         ("hospital_user_readable", "SELECT", "true", None),
+        ("hospital_user_insert", "INSERT", None, "true"),
+        ("hospital_user_update", "UPDATE", "true", "true"),
+        ("hospital_user_delete", "DELETE", "true", None),
     ],
     "hospital_dept": [
         ("hospital_dept_readable", "SELECT", "true", None),

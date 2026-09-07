@@ -18,10 +18,12 @@ export default defineEventHandler(async (event) => {
 
     const client = await serverSupabaseClient(event)
 
+    const RETENTION_DAYS = 30
+
     // ตรวจสอบว่ามี record อยู่จริงก่อนลบ (ใช้ appointment_id ตาม schema จริง)
     const { data: existing, error: findError } = await client
       .from('appointments')
-      .select('appointment_id')
+      .select('appointment_id, status, deleted_at')
       .eq('appointment_id', numericId)
       .single()
 
@@ -32,10 +34,16 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // อัปเดตสถานะเป็น 'completed' (เสร็จสิ้น) เพื่อเก็บไว้ในประวัติและ backup ข้อมูล
+    // ถ้าถูกลบไปแล้ว (มี deleted_at) ไม่ต้องลบซ้ำ
+    if (existing.deleted_at) {
+      return { success: true, message: 'รายการนี้อยู่ในประวัติแล้ว', deleted_at: existing.deleted_at, retention_days: RETENTION_DAYS }
+    }
+
+    // Soft-delete: เก็บ deleted_at = เวลาปัจจุบัน (ข้อมูลจะค้างในประวัติ 30 วัน แล้วถูกลบถาวรอัตโนมัติ)
+    const deleteTime = new Date().toISOString()
     const { error: updateError } = await client
       .from('appointments')
-      .update({ status: 'completed' })
+      .update({ deleted_at: deleteTime, status: 'cancelled' })
       .eq('appointment_id', numericId)
 
     if (updateError) {
@@ -46,7 +54,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    return { success: true, message: 'ลบรายการและย้ายไปประวัติเรียบร้อย (สถานะ: เสร็จสิ้น)' }
+    return {
+      success: true,
+      deleted_at: deleteTime,
+      retention_days: RETENTION_DAYS,
+      message: `ลบรายการเสร็จสิ้น ข้อมูลจะคงอยู่ในประวัติ ${RETENTION_DAYS} วัน แล้วถูกลบออกจากระบบอัตโนมัติ`,
+    }
   } catch (err: any) {
     if (err.statusCode) throw err
 

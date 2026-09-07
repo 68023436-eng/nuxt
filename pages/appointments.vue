@@ -314,7 +314,8 @@
                 (ID: {{ itemToDelete?.appointment_id }}) ใช่หรือไม่?
               </p>
               <p class="tw-text-xs tw-text-amber-600 tw-bg-amber-50 tw-p-2.5 tw-rounded-lg tw-border tw-border-amber-200">
-                รายการนี้จะถูกลบออกจากระบบของโรงพยาบาล
+                รายการนี้จะถูกย้ายไปเก็บในหน้าประวัติเป็นเวลา <strong>30 วัน</strong> 
+                เมื่อครบกำหนดจะถูกลบออกจากระบบอัตโนมัติ — คุณสามารถกู้คืนได้ก่อนครบกำหนด
               </p>
             </div>
 
@@ -423,7 +424,7 @@ const confirmDeleteAppointment = async () => {
     }
 
     closeDeleteModal()
-    alert('ลบและย้ายข้อมูลไปหน้าประวัติเรียบร้อยแล้ว')
+    alert('ลบและย้ายข้อมูลไปหน้าประวัติเรียบร้อยแล้ว ข้อมูลจะถูกลบถาวรหลังครบ 30 วัน')
   } catch (error) {
     alert('เกิดข้อผิดพลาดในการลบ: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
     console.error('Delete error:', error)
