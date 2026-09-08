@@ -110,6 +110,7 @@ const onDecoded = (value) => {
 }
 
 const searchPhone = () => {
+  if (checking.value) return
   phoneError.value = false
   if (!phone.value.trim()) {
     phoneError.value = true
@@ -130,6 +131,7 @@ const rescan = () => {
 }
 
 const verifyBody = async (method, value) => {
+  if (checking.value) return // ป้องกัน request ซ้ำจาก click/Enter ซ้ำ (บันทึกประวัติซ้ำ)
   checking.value = true
   errorMsg.value = ''
   try {

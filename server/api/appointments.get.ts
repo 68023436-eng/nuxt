@@ -1,5 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { RETENTION_DAYS } from '~/constants/appointments'
+import { normalizeName, normalizePhone } from '~/utils/name'
 
 /**
  * GET /api/appointments
@@ -12,7 +13,7 @@ import { RETENTION_DAYS } from '~/constants/appointments'
  */
 export default defineEventHandler(async (event) => {
   try {
-    const { role } = requirePermission(event, 'view')
+    const { role, ...session } = requirePermission(event, 'view')
 
     // รปภ. ต้องไม่เห็นข้อมูลนัดหมาย/ผู้ป่วย (ดูได้เฉพาะหน้า ตรวจสอบQR + ประวัติของตัวเอง)
     if (role === 'Security_guard') {
@@ -25,7 +26,9 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const retentionDays = RETENTION_DAYS
 
-    const { data, error } = await client
+    // Patient ดูได้เฉพาะนัดของตัวเองเท่านั้น (ผูกจาก session: ชื่อ + เบอร์)
+    // — ไม่รับ user_id/patient_id จาก query เลย ป้องกันการแก้พารามิเตอร์เพื่อดูของคนอื่น
+    const query = client
       .from('appointments')
       .select(`
         appointment_id,
@@ -43,7 +46,16 @@ export default defineEventHandler(async (event) => {
         department:hospital_dept(dept_name_th),
         location:hospital_parking(building_name)
       `)
-      .order('created_at', { ascending: false })
+
+    if (role === 'Patient') {
+      // ผูกเจ้าของนัดจาก session (ไม่รับ user_id/patient_id จาก client)
+      // normalize ชื่อ/เบอร์ให้ตรงกับที่ clinic เก็บไว้ตอนสร้าง (server/utils/name.ts)
+      query
+        .eq('phone_number', normalizePhone(session.phone_number))
+        .eq('patient_name', normalizeName(session.full_name))
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       console.error('Server fetch error:', error.message)

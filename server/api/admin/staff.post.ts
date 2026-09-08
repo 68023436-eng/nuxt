@@ -1,6 +1,7 @@
 import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/server'
 import { ROLE_LABELS, STAFF_ROLES } from '~/constants/roles'
 import type { AccessRole } from '~/constants/roles'
+import { collapseSpaces } from '~/utils/name'
 
 /**
  * POST /api/admin/staff
@@ -17,7 +18,7 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event) || {}
 
-    const fullName = typeof body.full_name === 'string' ? body.full_name.trim() : ''
+    const fullName = typeof body.full_name === 'string' ? collapseSpaces(body.full_name) : ''
     const role = body.role as string
     const phoneNumber = typeof body.phone_number === 'string' ? body.phone_number.trim() : ''
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''

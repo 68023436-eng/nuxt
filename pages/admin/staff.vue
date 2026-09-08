@@ -128,7 +128,8 @@
               <div>
                 <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">ชื่อ-นามสกุล <span class="tw-text-red-500">*</span></label>
                 <input v-model="form.full_name" type="text" maxlength="100" placeholder="ชื่อ-นามสกุล (ตรงกับชื่อที่ใช้ login ต้องไม่ซ้ำกับตำแหน่งนี้)"
-                  class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400" />
+                  class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
+                  @input="form.full_name = collapseSpaces(form.full_name)" />
               </div>
 
               <div>
@@ -221,6 +222,7 @@
 
 <script setup>
 import { ROLE_LABELS } from '~/constants/roles'
+import { collapseSpaces } from '~/utils/name'
 
 // ============================================================
 // Composables

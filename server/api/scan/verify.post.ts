@@ -7,13 +7,15 @@ import { serverSupabaseClient } from '#supabase/server'
  * - method = 'qr'    → ตรวจจาก qr_token
  * - method = 'phone' → ตรวจจาก phone_number
  *
- * ผลลัพธ์มีเพียง 2 สถานะ: valid (มีสิทธิ์จอด) / invalid (ไม่มีสิทธิ์จอด)
- * NO ไม่ส่งข้อมูลผู้ป่วยหรือรายละเอียดนัดหมายกลับไป
+ * ผลลัพธ์มีเพียง 2 สถานะ: valid (มีสิทธิ์จอดวันนี้) / invalid (ไม่มีสิทธิ์จอด)
+ * กฎ: QR/เบอร์ ตรวจสอบผ่านเมื่อ appointment ยัง active และ appointment_date ตรงกับวันนี้ (Asia/Bangkok)
+ * - นัดวันอื่น (ก่อนหน้าหรือยังไม่ถึง) → invalid แต่ยังบันทึกประวัติ
+ * - NO ไม่ส่งข้อมูลผู้ป่วยหรือรายละเอียดนัดหมายกลับไป
  * ทุกครั้งที่ตรวจสอบจะบันทึก scan_history (เฉพาะรายการที่ รปภ. ตรวจสอบเอง)
  */
 export default defineEventHandler(async (event) => {
   try {
-    const session = requirePermission(event, 'view')
+    const session = requireAnyRole(event, ['Security_guard', 'Admin'])
 
     const body = await readBody(event).catch(() => ({}))
     const method = String(body.method || 'qr').trim()
@@ -48,12 +50,16 @@ export default defineEventHandler(async (event) => {
 
     const client = await serverSupabaseClient(event)
 
-    // === ตรวจสิทธิ์: qr_token หรือ phone_number ที่ตรง + ยัง active ===
-    let found = false
+    // === ตรวจสิทธิ์: qr_token หรือ phone_number ที่ตรง + ยัง active + วันที่นัด = วันนี้ (Asia/Bangkok) ===
+    // foundRecord  = appointment ที่ตรงกับ QR/เบอร์ (ทุกวันที่) → ใช้เก็บชื่อ/เบอร์ไว้ในประวัติ
+    // todaysRecord = appointment ที่ตรงและนัด "วันนี้" ด้วย → เท่านั้นที่ถือว่า valid (ผ่านสิทธิ์วันนี้)
+    const todayKey = bangkokToday()
+    let foundRecord: any = null
+    let todaysRecord: any = null
     if (method === 'qr') {
       const { data, error } = await client
         .from('appointments')
-        .select('appointment_id')
+        .select('appointment_id, patient_name, phone_number, appointment_date')
         .eq('qr_token', qrToken)
         .eq('status', 'active')
         .maybeSingle()
@@ -61,20 +67,32 @@ export default defineEventHandler(async (event) => {
         console.error('Scan verify (qr) error:', error.message)
         throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถตรวจสอบสิทธิ์ได้ในขณะนี้' })
       }
-      found = !!data
+      foundRecord = data || null
+      // QR ของนัดวันอื่น (วานนี้/พรุ่งนี้) → รู้ว่าเป็นของใคร แต่ยังนับว่าไม่ผ่านวันนี้
+      if (foundRecord && bangkokDateKey(foundRecord.appointment_date) === todayKey) {
+        todaysRecord = foundRecord
+      }
     } else {
+      // มีได้หลายนัด → ต้องเจอ appointment ที่ active และนัดตรงกับ "วันนี้" เท่านั้น
       const { data, error } = await client
         .from('appointments')
-        .select('appointment_id')
+        .select('appointment_id, patient_name, appointment_date')
         .eq('phone_number', phoneNumber)
         .eq('status', 'active')
-        .limit(1)
+        .limit(20)
       if (error && !String(error.message).toLowerCase().includes('row-level security')) {
         console.error('Scan verify (phone) error:', error.message)
         throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถตรวจสอบสิทธิ์ได้ในขณะนี้' })
       }
-      found = !!(data && data.length > 0)
+      foundRecord = data && data.length > 0 ? data[0] : null
+      todaysRecord = (data || []).find((a: any) => bangkokDateKey(a.appointment_date) === todayKey) || null
     }
+
+    const found = !!todaysRecord
+    // เบอร์ที่บันทึกลงประวัติ: ค้นหาด้วยเบอร์ → เบอร์ที่กรอก, สแกน QR พบข้อมูล → เบอร์ในใบจอง
+    const phoneToLog = method === 'phone'
+      ? phoneNumber
+      : (foundRecord?.phone_number ?? null)
 
     const result = found ? 'valid' : 'invalid'
     const identity = `${session.full_name} ${session.phone_number}`.trim()
@@ -98,7 +116,9 @@ export default defineEventHandler(async (event) => {
         await client.from('scan_history').insert({
           method,
           qr_token: qrToken,
-          phone_number: phoneNumber,
+          phone_number: phoneToLog,
+          patient_name: foundRecord?.patient_name ?? null,
+          appointment_id: foundRecord?.appointment_id != null ? String(foundRecord.appointment_id) : null,
           result,
           checked_by: identity,
         })

@@ -6,22 +6,30 @@
 --   หรือรันผ่าน Supabase Dashboard > SQL Editor
 --
 -- ผลลัพธ์:
---   - สร้างตาราง scan_history (ถ้ายังไม่มี)
+--   - สร้างตาราง scan_history (ถ้ายังไม่มี) + เพิ่มคอลัมน์ที่ขาด (ถ้าตารางเคยสร้างด้วย schema เก่า)
 --   - บันทึกเฉพาะรายการที่ รปภ. ตรวจสอบจริง (สแกน QR / ค้นหาเบอร์โทร)
 --   - ไม่กระทบตาราง appointments / ข้อมูลนัดหมายเดิม
 --   - RLS เปิด + policy SELECT/INSERT อนุญาต (ให้แอปใช้งานผ่าน service key)
+--
+-- มigrations นี้รันกี่ครั้งก็ได้ (idempotent)
 -- ============================================================
 
--- สร้างตาราง (ถ้ายังไม่มี)
+-- สร้างตาราง (ถ้ายังไม่มี) พร้อมคอลัมน์ทั้งหมดที่หน้า ประวัติการตรวจสอบ ใช้
 CREATE TABLE IF NOT EXISTS public.scan_history (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   method TEXT NOT NULL CHECK (method IN ('qr', 'phone')),
   qr_token TEXT,
   phone_number TEXT,
+  patient_name TEXT,
+  appointment_id TEXT,
   result TEXT NOT NULL CHECK (result IN ('valid', 'invalid')),
   checked_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- อัพเกรดตารางที่เคยสร้างด้วย schema เก่า (ยังไม่มีคอลัมน์ patient_name / appointment_id)
+ALTER TABLE public.scan_history ADD COLUMN IF NOT EXISTS patient_name TEXT;
+ALTER TABLE public.scan_history ADD COLUMN IF NOT EXISTS appointment_id TEXT;
 
 -- index สำหรับหน้าประวัติของแต่ละ รปภ. (เรียงตามเวลาล่าสุด)
 CREATE INDEX IF NOT EXISTS idx_scan_history_checked_by
