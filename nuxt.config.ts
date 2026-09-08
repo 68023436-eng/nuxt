@@ -12,6 +12,15 @@ export default defineNuxtConfig({
     redirect: false
   },
 
+  vite: {
+    optimizeDeps: {
+      // บังคับให้ Vite pre-bundle cookie (CJS-only) ด้วย interop ที่ถูกต้อง
+      // แก้ hydration error: "does not provide an export named 'parse'"
+      // (cookie ถูก import แบบ named export ใน @supabase/ssr)
+      include: ['cookie']
+    }
+  },
+
   css: [
     '~/assets/css/tailwind.css'
   ],
