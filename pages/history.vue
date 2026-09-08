@@ -5,6 +5,268 @@
 
     <!-- Main Content -->
     <div class="tw-flex-1 tw-min-w-0 tw-p-4 md:tw-p-8">
+
+      <!-- ======== มุมมองของ รปภ.: ประวัติการตรวจสอบของตัวเองเท่านั้น ======== -->
+      <div v-if="isGuard">
+        <!-- Header Banner -->
+        <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-sky-100 tw-border-l-8 tw-border-l-sky-600 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
+          <div>
+            <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">ประวัติการตรวจสอบ</h1>
+            <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Security Check History</p>
+          </div>
+          <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+            <button
+              @click="fetchScanHistory"
+              :disabled="loading"
+              class="tw-bg-white hover:tw-bg-sky-50 disabled:tw-bg-gray-100 tw-text-sky-700 tw-border tw-border-sky-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
+            >
+              <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชประวัติ' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div v-if="loading" class="tw-text-center tw-py-12">
+          <div class="tw-inline-block tw-w-8 tw-h-8 tw-border-4 tw-border-sky-400 tw-border-t-transparent tw-rounded-full tw-animate-spin"></div>
+          <p class="tw-text-gray-500 tw-text-lg tw-mt-3">กำลังโหลดประวัติ...</p>
+        </div>
+
+        <!-- Error -->
+        <div v-else-if="errorMsg" class="tw-bg-red-50 tw-border tw-border-red-200 tw-p-4 tw-rounded-xl tw-text-red-600">
+          <p>เกิดข้อผิดพลาด: {{ errorMsg }}</p>
+          <button @click="fetchScanHistory" class="tw-mt-2 tw-text-sm tw-underline hover:tw-text-red-800">ลองอีกครั้ง</button>
+        </div>
+
+        <!-- Empty -->
+        <div v-else-if="scanHistory.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-8 sm:tw-p-12 tw-rounded-2xl tw-text-center">
+          <p class="tw-text-gray-400 tw-text-lg">ยังไม่มีประวัติการตรวจสอบ</p>
+          <p class="tw-text-gray-400 tw-text-sm tw-mt-1">รายการที่คุณเคยสแกน QR หรือค้นหาเบอร์โทร จะบันทึกไว้ที่นี่</p>
+        </div>
+
+        <!-- Guard Scan History Table -->
+        <div v-else class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-100 tw-overflow-hidden">
+          <div class="tw-overflow-x-auto">
+            <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[720px]">
+              <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
+                <tr>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ลำดับ</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ผู้ถูกตรวจสอบ</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วันที่ / เวลา</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วิธีตรวจสอบ</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ผลการตรวจสอบ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(item, index) in scanHistory"
+                  :key="item.id"
+                  class="tw-border-b tw-border-slate-100 hover:tw-bg-slate-50 tw-transition-colors"
+                >
+                  <td class="tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
+                  <td class="tw-px-5 tw-py-4">
+                    <div class="tw-text-gray-800 tw-font-medium">{{ item.patient_name || 'ไม่ทราบชื่อ' }}</div>
+                    <div v-if="item.phone_number" class="tw-text-xs tw-text-slate-500 tw-mt-0.5 tw-font-mono">
+                      {{ item.phone_number }}
+                    </div>
+                  </td>
+                  <td class="tw-px-5 tw-py-4 tw-text-gray-800">{{ formatDateTime(item.created_at) }}</td>
+                  <td class="tw-px-5 tw-py-4">
+                    <span class="tw-inline-flex tw-items-center tw-gap-1.5 tw-text-gray-700">
+                      {{ item.method === 'qr' ? '📷 สแกน QR Code' : '📞 ค้นหาเบอร์โทร' }}
+                    </span>
+                  </td>
+                  <td class="tw-px-5 tw-py-4">
+                    <span
+                      :class="item.result === 'valid'
+                        ? 'tw-bg-green-100 tw-text-green-700'
+                        : 'tw-bg-red-100 tw-text-red-700'"
+                      class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium"
+                    >
+                      {{ item.result === 'valid' ? '✓ มีสิทธิ์' : '✕ ไม่มีสิทธิ์' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="tw-px-6 tw-py-3 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-sm tw-text-gray-500">
+            ทั้งหมด {{ scanHistory.length }} รายการ
+          </div>
+        </div>
+      </div>
+
+      <!-- ======== มุมมองของผู้ใช้ทั่วไป (Patient): นัดหมายทั้งหมดของตัวเอง ======== -->
+      <template v-else-if="isPatient">
+        <!-- Header Banner พร้อมปุ่มรีเฟรช -->
+        <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-cyan-100 tw-border-l-8 tw-border-l-cyan-600 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
+          <div>
+            <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">ประวัติการนัดหมายของฉัน</h1>
+            <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">My Appointment History</p>
+          </div>
+          <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+            <button
+              @click="fetchHistory"
+              :disabled="loading"
+              class="tw-bg-white hover:tw-bg-cyan-50 disabled:tw-bg-gray-100 tw-text-cyan-700 tw-border tw-border-cyan-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
+            >
+              <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชประวัติ' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="tw-text-center tw-py-12">
+          <div class="tw-inline-block tw-w-8 tw-h-8 tw-border-4 tw-border-cyan-400 tw-border-t-transparent tw-rounded-full tw-animate-spin"></div>
+          <p class="tw-text-gray-500 tw-text-lg tw-mt-3">กำลังโหลดประวัติ...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="errorMsg" class="tw-bg-red-50 tw-border tw-border-red-200 tw-p-4 tw-rounded-xl tw-text-red-600">
+          <p>เกิดข้อผิดพลาด: {{ errorMsg }}</p>
+          <button @click="fetchHistory" class="tw-mt-2 tw-text-sm tw-underline hover:tw-text-red-800">ลองอีกครั้ง</button>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="upcomingAppointments.length === 0 && pastAppointments.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-8 sm:tw-p-12 tw-rounded-2xl tw-text-center">
+          <p class="tw-text-gray-400 tw-text-lg">ยังไม่มีประวัติการนัดหมาย</p>
+          <p class="tw-text-gray-400 tw-text-sm tw-mt-1">นัดหมายของคุณทั้งหมดจะแสดงอยู่ที่นี่</p>
+        </div>
+
+        <template v-else>
+          <!-- ==== ส่วน A: นัดที่จะมาถึง (วันนัด >= วันนี้) ==== -->
+          <section v-if="upcomingAppointments.length > 0" class="tw-mb-8">
+            <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+              <h2 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-flex tw-items-center tw-gap-2">
+                <span>🗓️</span> นัดที่จะมาถึง
+              </h2>
+              <span class="tw-text-sm tw-text-gray-500">ทั้งหมด {{ upcomingAppointments.length }} รายการ</span>
+            </div>
+            <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-100 tw-overflow-hidden">
+              <div class="tw-overflow-x-auto">
+                <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[920px]">
+                  <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
+                    <tr>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">ลำดับ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">ชื่อผู้ป่วย / เบอร์โทร</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[140px]">ทะเบียนรถ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">แผนกตรวจ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">วันและเวลานัดหมาย</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[150px] tw-text-center">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(item, index) in upcomingAppointments"
+                      :key="item.appointment_id"
+                      class="tw-border-b tw-border-slate-100 hover:tw-bg-slate-50 tw-transition-colors"
+                    >
+                      <td class="tw-px-5 tw-py-4 tw-text-gray-500 tw-whitespace-nowrap">{{ index + 1 }}</td>
+                      <td class="tw-px-5 tw-py-4">
+                        <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[190px]" :title="item.patient_name">{{ item.patient_name }}</div>
+                        <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</div>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
+                        <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
+                          {{ item.license_plate }}
+                        </span>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-text-gray-700">
+                        <span class="tw-line-clamp-2">{{ item.department_name || item.dept_id || '-' }}</span>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
+                        <div class="tw-text-gray-700">{{ formatDate(item.appointment_date) }}</div>
+                        <div class="tw-text-xs tw-text-cyan-600 tw-font-medium tw-mt-0.5">{{ item.time_slot }}</div>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
+                        <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
+                          {{ statusLabel(item.status) }}
+                        </span>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-text-center tw-whitespace-nowrap">
+                        <button
+                          @click="openDetail(item)"
+                          class="tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
+                        >
+                          ดูเพิ่มเติม
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ==== ส่วน B: ประวัติ (วันนัด < วันนี้) ==== -->
+          <section v-if="pastAppointments.length > 0">
+            <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
+              <h2 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-flex tw-items-center tw-gap-2">
+                <span>📜</span> ประวัติ
+              </h2>
+              <span class="tw-text-sm tw-text-gray-500">ทั้งหมด {{ pastAppointments.length }} รายการ</span>
+            </div>
+            <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-100 tw-overflow-hidden">
+              <div class="tw-overflow-x-auto">
+                <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[920px]">
+                  <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
+                    <tr>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">ลำดับ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">ชื่อผู้ป่วย / เบอร์โทร</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[140px]">ทะเบียนรถ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">แผนกตรวจ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">วันและเวลานัดหมาย</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[150px] tw-text-center">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(item, index) in pastAppointments"
+                      :key="item.appointment_id"
+                      class="tw-border-b tw-border-slate-100 hover:tw-bg-slate-50 tw-transition-colors"
+                    >
+                      <td class="tw-px-5 tw-py-4 tw-text-gray-500 tw-whitespace-nowrap">{{ index + 1 }}</td>
+                      <td class="tw-px-5 tw-py-4">
+                        <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[190px]" :title="item.patient_name">{{ item.patient_name }}</div>
+                        <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</div>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
+                        <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
+                          {{ item.license_plate }}
+                        </span>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-text-gray-700">
+                        <span class="tw-line-clamp-2">{{ item.department_name || item.dept_id || '-' }}</span>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
+                        <div class="tw-text-gray-700">{{ formatDate(item.appointment_date) }}</div>
+                        <div class="tw-text-xs tw-text-cyan-600 tw-font-medium tw-mt-0.5">{{ item.time_slot }}</div>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
+                        <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
+                          {{ statusLabel(item.status) }}
+                        </span>
+                      </td>
+                      <td class="tw-px-5 tw-py-4 tw-text-center tw-whitespace-nowrap">
+                        <button
+                          @click="openDetail(item)"
+                          class="tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
+                        >
+                          ดูเพิ่มเติม
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </template>
+      </template>
+
+      <!-- ======== มุมมองของเจ้าหน้าที่/Admin: ประวัตินัดหมาย + กู้คืน ======== -->
+      <template v-else>
       <!-- Header Banner พร้อมปุ่มรีเฟรช -->
       <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-purple-100 tw-border-l-8 tw-border-l-purple-600 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
         <div>
@@ -205,6 +467,8 @@
           ประวัติทั้งหมด {{ historyAppointments.length }} รายการ
         </div>
       </div>
+      </template>
+
     </div>
 
     <!-- ======= Detail Modal ======= -->
@@ -309,15 +573,10 @@
                 </div>
               </div>
 
-              <!-- QR Token -->
-              <div class="tw-flex tw-items-start tw-gap-3">
-                <div class="tw-w-8 tw-h-8 tw-bg-indigo-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
-                  <span class="tw-text-indigo-500 tw-text-sm">🔑</span>
-                </div>
-                <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">QR Token</p>
-                  <p class="tw-text-gray-800 tw-font-mono tw-text-sm">{{ selectedAppointment.qr_token }}</p>
-                </div>
+              <!-- QR Code -->
+              <div class="tw-bg-slate-50 tw-border tw-border-slate-200 tw-rounded-xl tw-p-4 tw-flex tw-flex-col tw-items-center tw-gap-2">
+                <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">QR TOKEN</p>
+                <QrCodeDisplay :value="selectedAppointment.qr_token" :size="144" />
               </div>
 
               <!-- สถานะ -->
@@ -460,7 +719,13 @@
 
 const { statusClass, statusLabel, formatDate, formatDateTime, daysUntilPurge, purgeNotice } = useAppointment()
 
-const { canRestore, canManage } = useSession()
+const { session, role, canRestore, canManage } = useSession()
+
+// รปภ. เห็นเฉพาะประวัติการตรวจสอบของตัวเอง (ไม่ใช่ประวัตินัดหมายของผู้ป่วย)
+const isGuard = computed(() => role.value === 'Security_guard')
+
+// ผู้ใช้ทั่วไปเห็นเฉพาะประวัตินัดหมายของตัวเอง (ทุกสถานะ)
+const isPatient = computed(() => role.value === 'Patient')
 
 // ============================================================
 // State
@@ -472,6 +737,9 @@ const errorMsg = ref('')
 const restoringId = ref(null)
 const purging = ref(false)
 const toastMsg = ref('')
+
+// ประวัติการตรวจสอบของ รปภ. (จากตาราง scan_history)
+const scanHistory = ref([])
 
 // State สำหรับเลือกหลายรายการเพื่อกู้คืนพร้อมกัน
 const selectedIds = ref([])
@@ -485,6 +753,29 @@ const batchRestoreMode = ref('selected')
 // กรองเอาเฉพาะรายการที่ถูกยกเลิก (cancelled) หรือเสร็จสิ้น (completed)
 const historyAppointments = computed(() => {
   return appointments.value.filter(item => item.status === 'cancelled' || item.status === 'completed')
+})
+
+// ผู้ใช้ทั่วไป (Patient): แบ่งเป็น
+//  - นัดที่จะมาถึง (appointment_date >= วันนี้ ตาม server/Asia/Bangkok)
+//  - ประวัติ (appointment_date < วันนี้)
+// ใช้วันจาก server (session.server_today) ไม่ใช่ clock ของ browser
+const serverToday = computed(() => session.value?.server_today || '')
+const patientAppointments = computed(() => {
+  return [...appointments.value].sort((a, b) =>
+    String(b.appointment_date).localeCompare(String(a.appointment_date))
+  )
+})
+
+const upcomingAppointments = computed(() => {
+  const today = serverToday.value
+  if (!today) return patientAppointments.value
+  return patientAppointments.value.filter(a => String(a.appointment_date) >= today)
+})
+
+const pastAppointments = computed(() => {
+  const today = serverToday.value
+  if (!today) return []
+  return patientAppointments.value.filter(a => String(a.appointment_date) < today)
 })
 
 // เลือกครบทุกแถวในตารางหรือยัง
@@ -531,6 +822,20 @@ const fetchHistory = async () => {
     appointments.value = data || []
   } catch (error) {
     errorMsg.value = error?.data?.statusMessage || error?.message || 'ไม่สามารถดึงข้อมูลประวัติได้'
+  } finally {
+    loading.value = false
+  }
+}
+
+// ดึงเฉพาะประวัติการตรวจสอบของ รปภ. คนปัจจุบัน (สแกน QR / ค้นหาเบอร์)
+const fetchScanHistory = async () => {
+  loading.value = true
+  errorMsg.value = ''
+  try {
+    const data = await $fetch('/api/scan/history', { method: 'GET' })
+    scanHistory.value = data || []
+  } catch (error) {
+    errorMsg.value = error?.data?.statusMessage || error?.message || 'ไม่สามารถดึงประวัติการตรวจสอบได้'
   } finally {
     loading.value = false
   }
@@ -591,10 +896,11 @@ const confirmBatchRestore = async () => {
     })
     const count = res?.count || 0
 
-    // อัปเดตฝั่งหน้าเว็บให้รายการที่กู้คืนหลุดจากตารางประวัติทันที
+    // อัปเดตสถานะในหน้าเว็บให้รายการที่กู้คืนเปลี่ยนเป็น backup (จะหลุดจากตารางประวัติโดยอัตโนมัติ)
     const restoredSet = new Set(batchRestoreIds.value)
-    appointments.value = appointments.value
-      .filter(i => !restoredSet.has(i.appointment_id))
+    appointments.value = appointments.value.map(i =>
+      restoredSet.has(i.appointment_id) ? { ...i, status: 'backup', deleted_at: null } : i
+    )
 
     selectedIds.value = []
     closeBatchRestoreModal()
@@ -672,6 +978,10 @@ const closeModal = () => {
 // ============================================================
 
 onMounted(() => {
+  if (isGuard.value) {
+    fetchScanHistory()
+    return
+  }
   fetchHistory()
   // ถ้าเป็น Admin จะล้างข้อมูลที่หมดอายุทิ้งให้อัตโนมัติตอนเข้าเพจ
   if (canManage.value) {
@@ -679,26 +989,3 @@ onMounted(() => {
   }
 })
 </script>
-
-<style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.25s ease;
-}
-.modal-enter-active .tw-relative,
-.modal-leave-active .tw-relative {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-from .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-.modal-leave-to .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-</style>

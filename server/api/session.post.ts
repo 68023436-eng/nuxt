@@ -1,29 +1,19 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { ROLE_PERMISSIONS } from '~/constants/roles'
-
-/**
- * ทำชื่อให้อยู่ในรูปที่เทียบได้ง่าย: ตัดช่องว่างเกิน, เทียบแบบไม่สน case, ตัดคำนำหน้า
- * (นางสาว / นาย / นาง) เพราะผู้ใช้กรอกชื่อได้หลายรูปแบบ
- */
-function normalizeStaffName(name: string): string {
-  return name
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/^(นางสาว|นาย|นาง)\s+/g, '')
-    .toLowerCase()
-}
+import { collapseSpaces, normalizeNameForMatch } from '~/utils/name'
 
 /**
  * POST /api/session
  * "Login" แบบไม่ใช้รหัสผ่าน — ระบุตัวตนด้วย ชื่อ + เบอร์โทร + role (switch button)
  * - เจ้าหน้าที่ (Admin/Clinic_staff/Security_guard): ต้องตรงกับแถวใน hospital_user
  * - Patient: ผู้ป่วยทั่วไป เลือกได้อิสระ (ไม่ต้องมีใน hospital_user)
+ * หมายเหตุ: ชื่อจะถูก normalize (trim + ลบช่องว่างซ้อน) ก่อนเก็บใน session
  */
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) || {}
 
-    const fullName = typeof body.full_name === 'string' ? body.full_name.trim() : ''
+    const fullName = typeof body.full_name === 'string' ? collapseSpaces(body.full_name) : ''
     const phoneNumber = typeof body.phone_number === 'string' ? body.phone_number.trim() : ''
     const role = body.role
 
@@ -42,12 +32,14 @@ export default defineEventHandler(async (event) => {
     }
 
     // 2. เจ้าหน้าที่ต้องมีชื่อ + role ตรงกับข้อมูลใน hospital_user (อ้างอิงจาก Supabase)
+    //    และต้องยัง active อยู่ (admin ปิดใช้งานแล้ว login ไม่ได้) — เผื่อ is_active เป็น NULL ให้ถือว่าใช้ได้
     if (role !== 'Patient') {
       const client = await serverSupabaseClient(event)
       const { data: users, error: userErr } = await client
         .from('hospital_user')
         .select('full_name, role')
         .eq('role', role)
+        .or('is_active.is.null,is_active.eq.true')
 
       if (userErr) {
         console.error('Hospital user lookup error:', userErr.message)
@@ -59,7 +51,8 @@ export default defineEventHandler(async (event) => {
 
       // เปรียบเทียบชื่อแบบทนทาน: เทียบ case, ตัด space ยาว, ตัดคำนำหน้า (นางสาว/นาย/นาง)
       const matched = (users || []).find(
-        (u: any) => normalizeStaffName(u.full_name) === normalizeStaffName(fullName)
+        (u: any) =>
+          normalizeNameForMatch(u.full_name) === normalizeNameForMatch(fullName)
       )
 
       if (!matched) {
@@ -86,6 +79,7 @@ export default defineEventHandler(async (event) => {
         phone_number: session.phone_number,
         role: session.role,
         permissions: ROLE_PERMISSIONS[session.role] || [],
+        server_today: bangkokToday(),
       },
     }
   } catch (err: any) {

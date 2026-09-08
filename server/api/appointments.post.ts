@@ -1,4 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
+import { ALLOWED_TIME_SLOTS } from '~/constants/appointments'
+import { composeFullName, normalizePhone } from '~/utils/name'
 
 /** ฟังก์ชัน sanitize ข้อความป้องกัน XSS */
 function sanitizeString(str: string): string {
@@ -29,26 +31,31 @@ export default defineEventHandler(async (event) => {
     // === Input Validation ===
 
     // 1. ตรวจสอบว่ามีข้อมูลที่จำเป็นครบ
-    if (!body.patient_name || !body.appointment_date || !body.time_slot) {
+    if ((!body.first_name && !body.patient_name) || !body.appointment_date || !body.time_slot) {
       throw createError({
         statusCode: 400,
         statusMessage: 'กรุณากรอกข้อมูลให้ครบ (ชื่อผู้ป่วย, วันนัดหมาย, ช่วงเวลา)',
       })
     }
 
-    // 2. ตรวจสอบชื่อผู้ป่วย (1-100 ตัวอักษร)
-    const patientName = sanitizeString(String(body.patient_name))
-    if (patientName.length === 0 || patientName.length > 100) {
+    // 2. ตรวจสอบชื่อผู้ป่วย (first_name + last_name, แยกช่อง)
+    //    - normalize (trim, ลบช่องว่างซ้อน, ตัดคำนำหน้า) ตอนส่งออกเป็น patient_name
+    //    - ใช้ composeFullName จาก server/utils/name.ts (เดียวกับตอน query/สร้าง session)
+    const firstName = String(body.first_name ?? body.patient_name ?? '').trim()
+    const lastName = String(body.last_name ?? '').trim()
+
+    const patientName = sanitizeString(composeFullName(firstName, lastName))
+    if (patientName.length === 0 || firstName.length > 100 || lastName.length > 100) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'ชื่อผู้ป่วยต้องมีความยาว 1-100 ตัวอักษร',
+        statusMessage: 'ชื่อ-นามสกุลผู้ป่วยต้องมีความยาว 1-100 ตัวอักษร',
       })
     }
 
     // 3. ตรวจสอบเบอร์โทรศัพท์ (ถ้าส่งมา ต้องเป็นตัวเลข 9-10 หลัก)
     let phoneNumber: string | null = null
     if (body.phone_number) {
-      const cleanPhone = String(body.phone_number).replace(/\s|-/g, '')
+      const cleanPhone = normalizePhone(String(body.phone_number))
       if (!PHONE_REGEX.test(cleanPhone)) {
         throw createError({
           statusCode: 400,
@@ -80,12 +87,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 6. ตรวจสอบ time_slot (1-30 ตัวอักษร)
+    // 6. ตรวจสอบ time_slot (ต้องเป็นค่าที่กำหนด)
     const timeSlot = sanitizeString(String(body.time_slot))
-    if (timeSlot.length === 0 || timeSlot.length > 30) {
+    if (!ALLOWED_TIME_SLOTS.includes(timeSlot)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'ช่วงเวลาต้องมีความยาว 1-30 ตัวอักษร',
+        statusMessage: 'ช่วงเวลาต้องเป็น 09:00 - 12:00 หรือ 13:00 - 16:00',
       })
     }
 
@@ -116,10 +123,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // === สร้าง QR Token อัตโนมัติ ===
+    // === สร้าง QR Token อัตโนมัติ (ใช้ crypto สำหรับความปลอดภัย) ===
     const qrToken = body.qr_token
       ? sanitizeString(String(body.qr_token))
-      : `QR-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+      : `QR-${crypto.randomUUID().replace(/-/g, '').substring(0, 24).toUpperCase()}`
 
     // === Insert ข้อมูลเข้า Supabase ===
     const client = await serverSupabaseClient(event)

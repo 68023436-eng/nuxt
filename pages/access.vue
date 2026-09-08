@@ -32,7 +32,7 @@
               maxlength="100"
               placeholder="ชื่อ-นามสกุล"
               :class="inputClass(fieldError.full_name)"
-              @input="clearFieldError('full_name')"
+              @input="onNameInput"
             />
             <p v-if="fieldError.full_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.full_name }}</p>
           </div>
@@ -102,12 +102,19 @@
 
 <script setup>
 import { ROLE_COLORS, ROLE_ICONS } from '~/constants/roles'
+import { collapseSpaces } from '~/utils/name'
 
 definePageMeta({
   middleware: false,
 })
 
 const { session, login } = useSession()
+
+// ช่องว่างซ้อน (space ยาวๆ) ระหว่างชื่อ-นามสกุล จะถูกย่อเป็นช่องว่างเดียวทันที
+const onNameInput = () => {
+  form.full_name = collapseSpaces(form.full_name)
+  clearFieldError('full_name')
+}
 
 // ข้อมูล role สำหรับแสดงเป็น switch button
 const roleOptions = useRoleOptions()
@@ -127,10 +134,13 @@ const fieldError = reactive({
 const isSubmitting = ref(false)
 const errorMsg = ref('')
 
-// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าใบนัดทันที
+// หน้าที่ให้ไปหลังเข้าสู่ระบบ (รปภ. ไปหน้า ตรวจสอบQR ไม่ใช่หน้ารายการนัด)
+const homeRoute = (role) => (role === 'Security_guard' ? '/verify' : '/appointments')
+
+// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าของแต่ละบทบาททันที
 onMounted(async () => {
   if (session.value) {
-    navigateTo('/appointments')
+    navigateTo(homeRoute(session.value.role))
   }
 })
 
@@ -145,7 +155,7 @@ const clearFieldError = (field) => {
 const validate = () => {
   let ok = true
   fieldError.full_name = form.full_name.trim() ? '' : 'กรุณากรอกชื่อผู้ใช้'
-  if (!fieldError.full_name) ok = ok
+  if (fieldError.full_name) ok = false
 
   const phone = form.phone_number.trim()
   if (!phone) {
@@ -198,9 +208,9 @@ const handleLogin = async () => {
   isSubmitting.value = true
   try {
     await login({ ...form })
-    // ใช้ navigateTo หลัง login สำเร็จ — ถ้าอยู่หน้าเดิมให้ไปหน้าใบนัด
+    // ไปหน้าเริ่มต้นตามบทบาท (รปภ. จะไปหน้า ตรวจสอบQR)
     if (useRoute().path === '/access') {
-      await navigateTo('/appointments')
+      await navigateTo(homeRoute(form.role))
     }
   } catch (error) {
     errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่'

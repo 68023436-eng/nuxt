@@ -11,7 +11,8 @@
 set -euo pipefail
 
 BASE_URL="${PURGE_BASE_URL:-http://localhost:3000}"
-CRON_SECRET="${PURGE_CRON_SECRET:-hc-dev-cron-secret}"
+# ต้องตั้งค่าให้ตรงกับ CRON_SECRET ใน .env (ไม่มีค่า default — ถ้าไม่ตั้ง script จะ fail ทันที)
+CRON_SECRET="${PURGE_CRON_SECRET:?ต้องตั้ง PURGE_CRON_SECRET หรือ CRON_SECRET ให้ตรงกับ .env}"
 
 echo "[purge $(date '+%Y-%m-%d %H:%M:%S')] เริ่มล้างข้อมูลที่หมดอายุ..."
 RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "${BASE_URL}/api/cron/purge" \

@@ -2,6 +2,8 @@
  * useAppointment Composable
  * รวม utility functions ที่ใช้ร่วมกันระหว่างหน้า appointments และ history
  */
+import { RETENTION_DAYS } from '~/constants/appointments'
+
 export const useAppointment = () => {
   /** สีของ badge ตามสถานะ */
   const statusClass = (status: string): string => {
@@ -51,9 +53,6 @@ export const useAppointment = () => {
     })
   }
 
-  const RETENTION_DAYS = 30
-
-  /** คำนวณจำนวนวันทีเหลือก่อนข้อมูลจะถูกลบถาวร (จาก deleted_at) */
   const daysUntilPurge = (deletedAt: string | null, daysUntilPurgeFromServer?: number | null): number | null => {
     if (deletedAt && typeof daysUntilPurgeFromServer === 'number') {
       return daysUntilPurgeFromServer

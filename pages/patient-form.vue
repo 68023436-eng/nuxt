@@ -17,14 +17,31 @@
             <!-- ชื่อคนไข้ -->
             <div>
               <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                ชื่อ-นามสกุล คนไข้ <span class="tw-text-red-500">*</span>
+                ชื่อ (คนไข้) <span class="tw-text-red-500">*</span>
               </label>
               <input 
-                v-model="form.patient_name" 
+                v-model="form.first_name" 
                 type="text" 
                 required 
-                placeholder="เช่น สมชาย ใจดี" 
+                placeholder="เช่น สมชาย" 
                 class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
+                @input="form.first_name = collapseSpaces(form.first_name)"
+              />
+              <p class="tw-text-xs tw-text-gray-400 tw-mt-1">ไม่ต้องกรอกคำนำหน้านาม (เช่น นาย/นาง/นางสาว)</p>
+            </div>
+
+            <!-- นามสกุล -->
+            <div>
+              <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                นามสกุล (คนไข้) <span class="tw-text-red-500">*</span>
+              </label>
+              <input 
+                v-model="form.last_name" 
+                type="text" 
+                required 
+                placeholder="เช่น ใจดี" 
+                class="tw-w-full tw-border tw-border-gray-300 tw-p-2.5 tw-rounded-lg tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400"
+                @input="form.last_name = collapseSpaces(form.last_name)"
               />
             </div>
 
@@ -120,12 +137,42 @@
       </div>
     </div>
   </div>
+
+  <!-- ======= Popup "สร้างใบนัดสำเร็จ" ======= -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div
+        v-if="showSuccessPopup"
+        class="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-p-4"
+      >
+        <!-- Backdrop: คลิกนอก popup → ปิดทันที -->
+        <div class="tw-fixed tw-inset-0 tw-bg-black/40 tw-backdrop-blur-sm" @click="closeSuccessPopup"></div>
+
+        <!-- Popup Content -->
+        <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-sm tw-overflow-hidden tw-transform tw-transition-all tw-text-center">
+          <div class="tw-bg-gradient-to-r tw-from-green-500 tw-to-emerald-600 tw-px-6 tw-py-5">
+            <div class="tw-w-14 tw-h-14 tw-mx-auto tw-rounded-full tw-bg-white tw-flex tw-items-center tw-justify-center tw-shadow">
+              <span class="tw-text-2xl">✅</span>
+            </div>
+          </div>
+          <div class="tw-px-6 tw-py-5">
+            <h2 class="tw-text-lg tw-font-bold tw-text-gray-800">สร้างใบนัดสำเร็จ</h2>
+            <p v-if="createdQr" class="tw-text-xs tw-text-gray-400 tw-font-mono tw-break-all tw-mt-2">
+              รหัส QR: {{ createdQr }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
 // ============================================================
 // สิทธิ์เข้าถึง: เฉพาะ Clinic_staff / Admin เท่านั้นที่กรอกข้อมูลได้
 // ============================================================
+
+import { collapseSpaces } from '~/utils/name'
 
 const { canCreate, refresh } = useSession()
 
@@ -134,7 +181,8 @@ const { canCreate, refresh } = useSession()
 // ============================================================
 
 const form = ref({
-  patient_name: '',
+  first_name: '',
+  last_name: '',
   phone_number: '',
   license_plate: '',
   dept_id: null,
@@ -144,6 +192,43 @@ const form = ref({
 
 const departmentList = ref([])
 const isSubmitting = ref(false)
+
+// ============================================================
+// Popup "สร้างใบนัดสำเร็จ" (Req 6/7)
+// - แสดง 5 วินาที แล้วหายอัตโนมัติ
+// - คลิกนอก popup → หายทันที
+// - แสดงเฉพาะตอน API ยืนยันการสร้างสำเร็จ (HTTP 200)
+// ============================================================
+
+const showSuccessPopup = ref(false)
+const createdQr = ref('')
+let popupTimer = null
+
+const closeSuccessPopup = () => {
+  showSuccessPopup.value = false
+  createdQr.value = ''
+  if (popupTimer) {
+    clearTimeout(popupTimer)
+    popupTimer = null
+  }
+}
+
+const showSuccess = (qrToken) => {
+  // หากมี popup เก่าค้างอยู่ ให้ปิดก่อน (กันหลาย popup ซ้อนกัน)
+  closeSuccessPopup()
+  createdQr.value = qrToken || ''
+  showSuccessPopup.value = true
+  // 5 วินาที แล้วหายอัตโนมัติ
+  popupTimer = setTimeout(() => {
+    showSuccessPopup.value = false
+    createdQr.value = ''
+    popupTimer = null
+  }, 5000)
+}
+
+onUnmounted(() => {
+  if (popupTimer) clearTimeout(popupTimer)
+})
 
 // ============================================================
 // ดึงข้อมูลแผนกจาก Supabase (ผ่าน Nuxt Server API)
@@ -172,14 +257,16 @@ const handleSubmit = async () => {
       body: payload,
     })
 
-    alert(`สร้างใบนัดสำเร็จ! รหัส QR: ${res.data?.qr_token || '-'}`)
+    // แสดง Popup "สร้างใบนัดสำเร็จ" — ถึงตรงนี้ได้ก็ต่อเมื่อ API คืน success (HTTP 200)
+    showSuccess(res?.data?.qr_token || '')
 
     // รีเซ็ตฟอร์ม
     form.value = {
-      patient_name: '',
+      first_name: '',
+      last_name: '',
       phone_number: '',
       license_plate: '',
-      dept_id: '',
+      dept_id: null,
       appointment_date: '',
       time_slot: '',
     }

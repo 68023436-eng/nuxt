@@ -214,15 +214,9 @@
 
               <div>
                 <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">ชื่อ-นามสกุล <span class="tw-text-red-500">*</span></label>
-                <input
-                  v-model="form.full_name"
-                  type="text"
-                  maxlength="100"
-                  placeholder="ชื่อ-นามสกุล"
-                  :class="inputClass(fieldErrors.full_name)"
-                  @input="clearFieldError('full_name')"
-                />
-                <p v-if="fieldErrors.full_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldErrors.full_name }}</p>
+                <input v-model="form.full_name" type="text" maxlength="100" placeholder="ชื่อ-นามสกุล (ตรงกับชื่อที่ใช้ login ต้องไม่ซ้ำกับตำแหน่งนี้)"
+                  class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
+                  @input="form.full_name = collapseSpaces(form.full_name)" />
               </div>
 
               <div>
@@ -384,6 +378,7 @@
 
 <script setup>
 import { ROLE_LABELS } from '~/constants/roles'
+import { collapseSpaces } from '~/utils/name'
 
 // ============================================================
 // Composables
@@ -708,36 +703,3 @@ onMounted(async () => {
   fetchStaff()
 })
 </script>
-
-<style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.25s ease;
-}
-.modal-enter-active .tw-relative,
-.modal-leave-active .tw-relative {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-from .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-.modal-leave-to .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.3s ease;
-}
-.toast-enter-from,
-.toast-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-</style>

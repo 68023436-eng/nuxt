@@ -1,4 +1,5 @@
 import { serverSupabaseClient } from '#supabase/server'
+import { RETENTION_DAYS } from '~/constants/appointments'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -17,8 +18,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const client = await serverSupabaseClient(event)
-
-    const RETENTION_DAYS = 30
 
     // ตรวจสอบว่ามี record อยู่จริงก่อนลบ (ใช้ appointment_id ตาม schema จริง)
     const { data: existing, error: findError } = await client
