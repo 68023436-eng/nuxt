@@ -28,6 +28,13 @@ function dedupeCssEntries(css: any[]): any[] {
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+
+  // ปิด app manifest (Nuxt 3.21 regression: dev pre-transform ไม่ resolve `#app-manifest` -
+  // ดู nuxt/nuxt#33606, #34164). โปรเจ็กต์นี้ไม่ได้ใช้อัปเดตแอปอัตโนมัติ/route rules manifest
+  experimental: {
+    appManifest: false
+  },
+
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxtjs/supabase',
@@ -41,7 +48,10 @@ export default defineNuxtConfig({
   ],
 
   supabase: {
-    redirect: false
+    redirect: false,
+    // เราไม่ได้ใช้ Database types แบบ generate ของ Supabase (เรียกผ่าน PostgREST ของเราเอง)
+    // ปิด default `~/types/database.types.ts` ที่ module อ้างถึงแต่ไฟล์ไม่มี -> ตัด warning
+    types: false
   },
 
 css: [
@@ -49,9 +59,10 @@ css: [
   ],
 
   runtimeConfig: {
-    // ใช้สำหรับเซ็นต์ cookie ของ session (ควรตั้ง SESSION_SECRET ใน .env ใน production)
-    sessionSecret: process.env.SESSION_SECRET || 'hc-dev-session-secret',
-    // ใช้สำหรับตรวจสอบสิทธิ์ cron ลบข้อมูลที่หมดอายุ (ตั้ง CRON_SECRET ใน .env)
-    cronSecret: process.env.CRON_SECRET || 'hc-dev-cron-secret'
+    // ใช้สำหรับเซ็นต์ cookie ของ session — ต้องตั้ง SESSION_SECRET ใน .env
+    // (ไม่มีค่า default อีกต่อไป: ถ้าไม่ตั้ง server จะปฏิเสธการเข้า/ออกระบบ แทนที่จะใช้ค่าที่คาดเดาได้)
+    sessionSecret: process.env.SESSION_SECRET || '',
+    // ใช้สำหรับตรวจสอบสิทธิ์ cron ลบข้อมูลที่หมดอายุ — ต้องตั้ง CRON_SECRET ใน .env
+    cronSecret: process.env.CRON_SECRET || ''
   }
 })

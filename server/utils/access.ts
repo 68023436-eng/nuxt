@@ -27,7 +27,14 @@ const ALL_ROLES = Object.keys(ROLE_PERMISSIONS) as AccessRole[]
 
 function getSecret(): string {
   const config = useRuntimeConfig()
-  return (config.sessionSecret as string) || 'hc-dev-session-secret'
+  const secret = config.sessionSecret as string
+  if (!secret) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'SESSION_SECRET ไม่ได้ตั้งค่าใน .env — ปิดใช้ระบบ session เพื่อความปลอดภัย',
+    })
+  }
+  return secret
 }
 
 function sign(body: string): string {

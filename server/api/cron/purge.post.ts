@@ -8,15 +8,15 @@ import { purgeExpiredAppointments } from '~/server/utils/purge'
  * เพราะถูกเรียกจาก cron job ภายนอกที่ไม่มี session ของผู้ใช้
  *
  * ตัวอย่าง cron job (เรียาทุกเที่ยงคืน):
- *   0 0 * * * curl -s -X POST http://localhost:3000/api/cron/purge -H "x-cron-secret: hc-dev-cron-secret"
+ *   0 0 * * * curl -s -X POST http://localhost:3000/api/cron/purge -H "x-cron-secret: <CRON_SECRET จาก .env>"
  */
 export default defineEventHandler(async (event) => {
   try {
     // ตรวจสอบ header ลับก่อนเสมอ (กันคนนอกปลอมเรียกได้)
     const config = useRuntimeConfig(event)
     const provided = getHeader(event, 'x-cron-secret')
-    const expected = (config.cronSecret as string) || 'hc-dev-cron-secret'
-    if (!provided || provided !== expected) {
+    const expected = config.cronSecret as string
+    if (!expected || !provided || provided !== expected) {
       throw createError({
         statusCode: 401,
         statusMessage: 'ไม่ได้รับอนุญาต (cron secret ไม่ถูกต้อง)',
