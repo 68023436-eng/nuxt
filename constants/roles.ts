@@ -5,6 +5,9 @@ export type AccessPermission = 'view' | 'create' | 'cancel' | 'restore' | 'manag
 // ลำดับ/รายการ role ที่ใช้ในเลือก (switch button)
 export const ROLE_ORDER: AccessRole[] = ['Admin', 'Clinic_staff', 'Security_guard', 'Patient']
 
+// บทบาทเจ้าหน้าที่ (ที่ admin จัดการได้ — มีบัญชีใน hospital_user + auth)
+export const STAFF_ROLES: AccessRole[] = ['Admin', 'Clinic_staff', 'Security_guard']
+
 // สิทธิ์ตาม role (อ้างอิงจากที่กำหนดว่าใครทำอะไรได้บ้าง)
 export const ROLE_PERMISSIONS: Record<AccessRole, AccessPermission[]> = {
   Admin: ['view', 'create', 'cancel', 'restore', 'manage'],
@@ -29,9 +32,9 @@ export const ROLE_DESCRIPTIONS: Record<AccessRole, string> = {
 
 export const ROLE_COLORS: Record<AccessRole, string> = {
   Admin: 'tw-from-emerald-400 tw-to-green-500',
-  Clinic_staff: 'tw-from-emerald-400 tw-to-green-500',
-  Security_guard: 'tw-from-emerald-400 tw-to-green-500',
-  Patient: 'tw-from-emerald-400 tw-to-green-500',
+  Clinic_staff: 'tw-from-teal-400 tw-to-emerald-500',
+  Security_guard: 'tw-from-sky-400 tw-to-blue-500',
+  Patient: 'tw-from-cyan-400 tw-to-teal-500',
 }
 
 export const ROLE_ICONS: Record<AccessRole, string> = {

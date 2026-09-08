@@ -38,6 +38,10 @@ PLANS = {
         ("appointments_update", "UPDATE", "true", "true"),
         ("appointments_delete", "DELETE", "true", None),
     ],
+    "scan_history": [
+        ("scan_history_select", "SELECT", "true", None),
+        ("scan_history_insert", "INSERT", None, "true"),
+    ],
 }
 
 

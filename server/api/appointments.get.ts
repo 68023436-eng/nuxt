@@ -1,4 +1,5 @@
 import { serverSupabaseClient } from '#supabase/server'
+import { RETENTION_DAYS } from '~/constants/appointments'
 
 /**
  * GET /api/appointments
@@ -11,10 +12,18 @@ import { serverSupabaseClient } from '#supabase/server'
  */
 export default defineEventHandler(async (event) => {
   try {
-    requirePermission(event, 'view')
+    const { role } = requirePermission(event, 'view')
+
+    // รปภ. ต้องไม่เห็นข้อมูลนัดหมาย/ผู้ป่วย (ดูได้เฉพาะหน้า ตรวจสอบQR + ประวัติของตัวเอง)
+    if (role === 'Security_guard') {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'บทบาทของคุณไม่มีสิทธิ์เข้าถึงข้อมูลนัดหมาย (เฉพาะหน้า ตรวจสอบ QR / ประวัติการตรวจสอบ)',
+      })
+    }
 
     const client = await serverSupabaseClient(event)
-    const retentionDays = 30
+    const retentionDays = RETENTION_DAYS
 
     const { data, error } = await client
       .from('appointments')

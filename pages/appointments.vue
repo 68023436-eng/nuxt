@@ -136,7 +136,7 @@
           <div class="tw-fixed tw-inset-0 tw-bg-black/50 tw-backdrop-blur-sm" @click="closeModal"></div>
 
           <!-- Modal Content -->
-          <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-lg tw-overflow-hidden tw-transform tw-transition-all">
+          <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-lg tw-max-h-[90vh] tw-flex tw-flex-col tw-overflow-hidden tw-transform tw-transition-all">
             
             <!-- Modal Header -->
             <div class="tw-bg-gradient-to-r tw-from-amber-400 tw-to-amber-500 tw-px-6 tw-py-4">
@@ -151,9 +151,38 @@
               </div>
             </div>
 
-            <!-- Modal Body -->
-            <div v-if="selectedAppointment" class="tw-px-6 tw-py-5 tw-space-y-4">
-              
+            <!-- Modal Body (scroll เฉพาะส่วนนี้ หากเนื้อหายาวเกินจอ) -->
+            <div v-if="selectedAppointment" class="tw-px-6 tw-py-5 tw-space-y-4 tw-min-h-0 tw-flex-1 tw-overflow-y-auto">
+
+              <!-- ======= QR Code Section (เด่นสุด สำหรับนำไปสแกนกับ รปภ.) ======= -->
+              <div class="tw-bg-slate-50 tw-border tw-border-slate-200 tw-rounded-xl tw-p-5 tw-flex tw-flex-col tw-items-center tw-gap-3">
+                <div class="tw-text-center">
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">QR CODE สำหรับเข้านัดหมาย</p>
+                  <p class="tw-text-xs tw-text-gray-500 tw-mt-0.5">นำไปแสดงให้เจ้าหน้าที่ รปภ. สแกนที่จุดเข้าออก</p>
+                </div>
+
+                <QrCodeDisplay :value="selectedAppointment.qr_token" :size="200" />
+
+                <!-- แสดง token แบบสั้น เพื่อตรวจสอบด้วยตา / copy ได้ -->
+                <p class="tw-text-gray-700 tw-font-mono tw-text-sm break-all tw-text-center tw-bg-white tw-rounded-lg tw-px-3 tw-py-1 tw-border tw-border-slate-200">
+                  {{ selectedAppointment.qr_token || 'ไม่มี QR Token' }}
+                </p>
+
+                <!-- ปุ่มนำทาง (Google Maps) ใกล้ๆ QR สำหรับหาจุดจอดรถ + อาคารคลินิก -->
+                <div class="tw-flex tw-flex-col sm:tw-flex-row tw-gap-2 tw-w-full tw-justify-center">
+                  <MapsDirectionsButton
+                    :destination="parkingDestination"
+                    label="นำทางไปจุดจอดรถ"
+                    icon="🅿️"
+                  />
+                  <MapsDirectionsButton
+                    :destination="clinicDestination"
+                    label="นำทางไปอาคารคลินิก"
+                    icon="🏥"
+                  />
+                </div>
+              </div>
+
               <!-- รหัสนัดหมาย -->
               <div class="tw-flex tw-items-start tw-gap-3">
                 <div class="tw-w-8 tw-h-8 tw-bg-slate-100 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
@@ -239,17 +268,6 @@
                 <div>
                   <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">ช่วงเวลา</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.time_slot }}</p>
-                </div>
-              </div>
-
-              <!-- QR Token -->
-              <div class="tw-flex tw-items-start tw-gap-3">
-                <div class="tw-w-8 tw-h-8 tw-bg-indigo-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
-                  <span class="tw-text-indigo-500 tw-text-sm">🔑</span>
-                </div>
-                <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">QR Token สำหรับสแกน</p>
-                  <p class="tw-text-gray-800 tw-font-mono tw-text-sm">{{ selectedAppointment.qr_token }}</p>
                 </div>
               </div>
 
@@ -350,6 +368,8 @@
 // Composables
 // ============================================================
 
+import { buildParkingDestination, buildClinicDestination } from '~/constants/clinic'
+
 const { statusClass, statusLabel, formatDate, formatDateTime } = useAppointment()
 
 const { canCancel } = useSession()
@@ -371,6 +391,12 @@ const activeAppointments = computed(() => {
 // Detail Modal State
 const showModal = ref(false)
 const selectedAppointment = ref(null)
+
+// ปลายทางนำทาง (Google Maps) ใช้ใน section QR Code
+const parkingDestination = computed(() =>
+  buildParkingDestination(selectedAppointment.value?.building_name || null),
+)
+const clinicDestination = computed(() => buildClinicDestination())
 
 // Delete Confirm Modal State
 const showDeleteModal = ref(false)
@@ -455,26 +481,3 @@ onMounted(() => {
   fetchAppointments()
 })
 </script>
-
-<style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.25s ease;
-}
-.modal-enter-active .tw-relative,
-.modal-leave-active .tw-relative {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-from .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-.modal-leave-to .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-</style>

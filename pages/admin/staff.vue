@@ -430,26 +430,3 @@ onMounted(async () => {
   fetchStaff()
 })
 </script>
-
-<style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.25s ease;
-}
-.modal-enter-active .tw-relative,
-.modal-leave-active .tw-relative {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-from .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-.modal-leave-to .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-</style>

@@ -127,10 +127,13 @@ const fieldError = reactive({
 const isSubmitting = ref(false)
 const errorMsg = ref('')
 
-// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าใบนัดทันที
+// หน้าที่ให้ไปหลังเข้าสู่ระบบ (รปภ. ไปหน้า ตรวจสอบQR ไม่ใช่หน้ารายการนัด)
+const homeRoute = (role) => (role === 'Security_guard' ? '/verify' : '/appointments')
+
+// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าของแต่ละบทบาททันที
 onMounted(async () => {
   if (session.value) {
-    navigateTo('/appointments')
+    navigateTo(homeRoute(session.value.role))
   }
 })
 
@@ -145,7 +148,7 @@ const clearFieldError = (field) => {
 const validate = () => {
   let ok = true
   fieldError.full_name = form.full_name.trim() ? '' : 'กรุณากรอกชื่อผู้ใช้'
-  if (!fieldError.full_name) ok = ok
+  if (fieldError.full_name) ok = false
 
   const phone = form.phone_number.trim()
   if (!phone) {
@@ -198,9 +201,9 @@ const handleLogin = async () => {
   isSubmitting.value = true
   try {
     await login({ ...form })
-    // ใช้ navigateTo หลัง login สำเร็จ — ถ้าอยู่หน้าเดิมให้ไปหน้าใบนัด
+    // ไปหน้าเริ่มต้นตามบทบาท (รปภ. จะไปหน้า ตรวจสอบQR)
     if (useRoute().path === '/access') {
-      await navigateTo('/appointments')
+      await navigateTo(homeRoute(form.role))
     }
   } catch (error) {
     errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่'
