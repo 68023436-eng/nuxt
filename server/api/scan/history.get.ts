@@ -2,22 +2,28 @@ import { serverSupabaseClient } from '#supabase/server'
 
 /**
  * GET /api/scan/history
- * ประวัติการตรวจสอบของ รปภ. คนปัจจุบัน (ที่ลง session ไว้)
- * - แสดงเฉพาะรายการที่ รปภ. คนนี้ตรวจสอบเองเท่านั้น (ไม่ใช่ประวัตินัดหมายทั้งหมดของผู้ป่วย)
- * - เปิดเผยเฉพาะ: วัน/เวลา, วิธีตรวจสอบ, ผลการตรวจสอบ
+ * ประวัติการตรวจสอบของ รปภ. คนปัจจุบัน เฉพาะ "วันนี้" (Asia/Bangkok) เท่านั้น
+ * - แสดงเฉพาะรายการที่ รปภ. คนนี้ตรวจสอบเองในวันนี้ (ไม่ใช่ประวัตินัดหมายทั้งหมดของผู้ป่วย)
+ * - ข้อมูลเก่ายังอยู่ครบใน database (ไม่ลบ) แต่กรองด้วย created_at ว่าอยู่ในขอบเขตวันนี้
+ * - เปิดเผยเพียง: ชื่อ/เบอร์ผู้ถูกตรวจ (เท่าที่บันทึกตอนตรวจ), วัน/เวลา, วิธีตรวจสอบ, ผลการตรวจสอบ
  */
 export default defineEventHandler(async (event) => {
   try {
-    const session = requirePermission(event, 'view')
+    const session = requireAnyRole(event, ['Security_guard', 'Admin'])
 
     const identity = `${session.full_name} ${session.phone_number}`.trim()
 
     const client = await serverSupabaseClient(event)
 
+    // ขอบเขต "วันนี้" ตาม Asia/Bangkok ([start, end) ใน UTC) — กรองที่ query ฝั่ง server
+    const { start, end } = bangkokDayRangeToday()
+
     const { data, error } = await client
       .from('scan_history')
-      .select('id, method, result, created_at')
+      .select('id, method, result, created_at, patient_name, phone_number')
       .eq('checked_by', identity)
+      .gte('created_at', start.toISOString())
+      .lt('created_at', end.toISOString())
       .order('created_at', { ascending: false })
       .limit(100)
 
@@ -40,6 +46,8 @@ export default defineEventHandler(async (event) => {
       method: item.method,
       result: item.result,
       created_at: item.created_at,
+      patient_name: item.patient_name || null,
+      phone_number: item.phone_number || null,
     }))
   } catch (err: any) {
     if (err.statusCode) throw err

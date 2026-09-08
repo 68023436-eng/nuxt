@@ -110,6 +110,18 @@ export function requireSession(event: any): AccessSession {
   return session
 }
 
+// ต้องการ session ที่มี role ใด role หนึ่งในที่กำหนด — ไม่ใช่ → 403
+export function requireAnyRole(event: any, roles: AccessRole[]): AccessSession {
+  const session = requireSession(event)
+  if (!roles.includes(session.role)) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: `บทบาทของคุณ (${session.role}) ไม่มีสิทธิ์ใช้ฟังก์ชันนี้`,
+    })
+  }
+  return session
+}
+
 // ต้องการสิทธิ์เฉพาะ — ไม่มี → 403
 export function requirePermission(event: any, perm: AccessPermission): AccessSession {
   const session = requireSession(event)

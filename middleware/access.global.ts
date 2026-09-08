@@ -59,4 +59,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
       return navigateTo('/verify')
     }
   }
+
+  // ผู้ที่ไม่ใช่ รปภ./Admin ห้ามเข้าหน้าตรวจสอบ QR (even direct URL /verify)
+  // ระดับหน้า — แต่การป้องกันจริงอยู่ที่ server API (scan/* requireAnyRole)
+  if (to.path === '/verify' && role && role !== 'Security_guard' && role !== 'Admin') {
+    return navigateTo('/appointments')
+  }
 })

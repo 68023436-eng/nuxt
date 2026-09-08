@@ -32,7 +32,7 @@
               maxlength="100"
               placeholder="ชื่อ-นามสกุล"
               :class="inputClass(fieldError.full_name)"
-              @input="clearFieldError('full_name')"
+              @input="onNameInput"
             />
             <p v-if="fieldError.full_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.full_name }}</p>
           </div>
@@ -102,12 +102,19 @@
 
 <script setup>
 import { ROLE_COLORS, ROLE_ICONS } from '~/constants/roles'
+import { collapseSpaces } from '~/utils/name'
 
 definePageMeta({
   middleware: false,
 })
 
 const { session, login } = useSession()
+
+// ช่องว่างซ้อน (space ยาวๆ) ระหว่างชื่อ-นามสกุล จะถูกย่อเป็นช่องว่างเดียวทันที
+const onNameInput = () => {
+  form.full_name = collapseSpaces(form.full_name)
+  clearFieldError('full_name')
+}
 
 // ข้อมูล role สำหรับแสดงเป็น switch button
 const roleOptions = useRoleOptions()
