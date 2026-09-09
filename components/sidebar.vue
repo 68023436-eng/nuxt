@@ -15,7 +15,7 @@
       <!-- เมนูนำทาง -->
       <div class="tw-flex tw-flex-col tw-items-center tw-mt-10 tw-gap-2">
         <button 
-          v-if="isGuard || asAdmin"
+          v-if="isGuard"
           @click="goTo('verify')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >
@@ -29,7 +29,7 @@
           ใบนัดหมาย
         </button>
         <button 
-          v-if="canCreate && !isGuard"
+          v-if="canCreate && !isGuard && !asAdmin"
           @click="goTo('form')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >

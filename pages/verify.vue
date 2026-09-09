@@ -5,19 +5,28 @@
 
     <!-- Main Content -->
     <div class="tw-flex-1 tw-p-4 sm:tw-p-8">
+      <!-- Access Denied -->
+      <div v-if="!isGuard" class="tw-max-w-md tw-mx-auto tw-mt-20 tw-text-center">
+        <div class="tw-w-20 tw-h-20 tw-bg-red-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
+          <span class="tw-text-4xl">🔒</span>
+        </div>
+        <h2 class="tw-text-xl tw-font-bold tw-text-gray-800">ไม่มีสิทธิ์เข้าถึงหน้านี้</h2>
+        <p class="tw-text-sm tw-text-slate-500 tw-mt-2">หน้านี้สำหรับเจ้าหน้าที่รักษาความปลอดภัย (รปภ.) เท่านั้น</p>
+      </div>
+
       <!-- Header Banner -->
-      <div class="tw-bg-gradient-to-r tw-from-sky-500 tw-to-blue-600 tw-p-5 sm:tw-p-6 tw-rounded-xl tw-shadow-sm tw-mb-6">
-        <h1 class="tw-text-2xl sm:tw-text-3xl tw-font-bold tw-text-white">ตรวจสอบสิทธิ์จอดรถ</h1>
-        <p class="tw-text-sm tw-text-sky-100 tw-mt-1 tw-font-mono">Smart QR Parking — Security Check</p>
+      <div v-if="isGuard" class="tw-items-center tw-bg-blue-200 tw-border-l-8 tw-border-l-blue-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
+        <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">ตรวจสอบสิทธิ์จอดรถ</h1>
+        <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Smart QR Parking — Security Check</p>
       </div>
 
       <!-- ผลการตรวจสอบ (แสดงผลลัพธ์แทนฟอร์มเมื่อมีผล) -->
-      <div v-if="result" class="tw-max-w-2xl tw-mx-auto">
+      <div v-if="isGuard && result" class="tw-max-w-2xl tw-mx-auto">
         <ScanResultCard :ok="result.ok" @rescan="rescan" />
       </div>
 
       <!-- ชุดตรวจสอบ (สแกน QR + ค้นหาเบอร์) -->
-      <div v-else class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-5 tw-max-w-5xl tw-mx-auto">
+      <div v-if="isGuard && !result" class="tw-grid tw-grid-cols-1 lg:tw-grid-cols-2 tw-gap-5 tw-max-w-5xl tw-mx-auto">
         <!-- ===== สแกน QR Code ===== -->
         <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-200 tw-p-6 sm:tw-p-8 tw-flex tw-flex-col tw-items-center tw-justify-center tw-text-center">
           <div class="tw-w-20 tw-h-20 tw-bg-sky-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mb-4">
@@ -81,6 +90,20 @@
 </template>
 
 <script setup>
+// ============================================================
+// Role guard — Security_guard only
+// ============================================================
+
+const { role } = useSession()
+
+const isGuard = computed(() => role.value === 'Security_guard')
+
+watch(role, (r) => {
+  if (r && r !== 'Security_guard') {
+    navigateTo(r === 'Admin' ? '/admin/staff' : '/appointments')
+  }
+}, { immediate: true })
+
 // ============================================================
 // State
 // ============================================================
