@@ -8,7 +8,7 @@
       <!-- Header Banner พร้อมปุ่มรีเฟรช -->
       <div class="tw-flex tw-justify-between tw-items-center tw-bg-amber-100 tw-border-l-8 tw-border-l-amber-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
         <div>
-          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">รายการนัดหมาย</h1>
+          <h1 class="tw-text-2xl tw-font-bold tw-text-black">รายการนัดหมาย</h1>
           <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Hospital Appointments &amp; Parking Management</p>
         </div>
 

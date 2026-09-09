@@ -5,7 +5,7 @@ import { collapseSpaces, normalizeNameForMatch } from '~/utils/name'
 /**
  * POST /api/session
  * "Login" แบบไม่ใช้รหัสผ่าน — ระบุตัวตนด้วย ชื่อ + เบอร์โทร + role (switch button)
- * - เจ้าหน้าที่ (Admin/Clinic_staff/Security_guard): ต้องตรงกับแถวใน hospital_user
+ * - เจ้าหน้าที่ (Admin/Clinic_staff/Security_guard): ชื่อ + เบอร์โทร + role ต้องตรงกับแถวใน hospital_user
  * - Patient: ผู้ป่วยทั่วไป เลือกได้อิสระ (ไม่ต้องมีใน hospital_user)
  * หมายเหตุ: ชื่อจะถูก normalize (trim + ลบช่องว่างซ้อน) ก่อนเก็บใน session
  */
@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
       const client = await serverSupabaseClient(event)
       const { data: users, error: userErr } = await client
         .from('hospital_user')
-        .select('full_name, role')
+        .select('full_name, role, phone_number')
         .eq('role', role)
         .or('is_active.is.null,is_active.eq.true')
 
@@ -59,6 +59,16 @@ export default defineEventHandler(async (event) => {
         throw createError({
           statusCode: 401,
           statusMessage: 'ไม่พบผู้ใช้ "ชื่อ + บทบาท" นี้ในระบบ กรุณาตรวจสอบชื่อหรือเลือกบทบาทใหม่',
+        })
+      }
+
+      // ตรวจเบอร์โทร: ชื่อและเบอร์ต้องตรงกับข้อมูลในระบบ (ถ้าในระบบมีเบอร์)
+      const storedPhone = typeof matched.phone_number === 'string' ? matched.phone_number.replace(/[\s-]/g, '') : ''
+      const inputPhone = phoneNumber.replace(/[\s-]/g, '')
+      if (!storedPhone || storedPhone !== inputPhone) {
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ กรุณาตรวจสอบอีกครั้ง',
         })
       }
     }
