@@ -174,11 +174,13 @@
                 <div class="tw-flex tw-flex-col sm:tw-flex-row tw-gap-2 tw-w-full tw-justify-center">
                   <MapsDirectionsButton
                     :destination="parkingDestination"
+                    :coord="PARKING_COORD"
                     label="นำทางไปจุดจอดรถ"
                     icon="🅿️"
                   />
                   <MapsDirectionsButton
                     :destination="clinicDestination"
+                    :coord="CLINIC_COORD"
                     label="นำทางไปอาคารคลินิก"
                     icon="🏥"
                   />
@@ -370,7 +372,7 @@
 // Composables
 // ============================================================
 
-import { buildParkingDestination, buildClinicDestination } from '~/constants/clinic'
+import { buildParkingDestination, buildClinicDestination, PARKING_COORD, CLINIC_COORD } from '~/constants/clinic'
 import { RETENTION_DAYS } from '~/constants/appointments'
 
 const { statusClass, statusLabel, formatDate, formatDateTime } = useAppointment()
