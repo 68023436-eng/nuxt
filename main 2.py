@@ -1,6 +1,6 @@
 import re
 import secrets
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -9,6 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Session
 from Database.database import Base, SessionLocal, engine    # ดึง Base และ engine จากโฟลเดอร์ Database
+
+
+def utcnow() -> datetime:
+    """UTC time แบบ naive (แทน datetime.utcnow ที่ถูก deprecate ใน Python 3.12)"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
 
 # โครงสร้างตารางใน Database (เพิ่ม phone_number และ department แล้ว)
 class Appointment(Base):
@@ -23,7 +29,8 @@ class Appointment(Base):
     appointment_date = Column(Date, nullable=False)
     time_slot = Column(String, nullable=False)
     status = Column(String, default="active")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    deleted_at = Column(DateTime, default=None, nullable=True)  # เวลาที่ลบ (ข้อมูลจะถูกลบถาวรหลัง 30 วัน)
 
     location_id = Column(
         Integer, ForeignKey("hospital_parking.location_id"), default=1
@@ -209,8 +216,11 @@ def get_departments(db: Session = Depends(get_db)):
     ]
 
 # ==========================================
-# 2. API ลบรายการ (Soft Delete เปลี่ยนสถานะเป็น cancelled)
+# 2. API ลบรายการ (Soft Delete: เก็บ deleted_at + เปลี่ยนสถานะเป็น cancelled)
+#    ข้อมูลจะอยู่ในประวัติ 30 วัน แล้วถูกลบถาวรอัตโนมัติ
 # ==========================================
+RETENTION_DAYS = 30
+
 @app.delete("/api/appointments/{appointment_id}")
 def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
     item = (
@@ -223,8 +233,15 @@ def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
             status_code=404, detail="ไม่พบรายการนัดหมายที่ต้องการลบ"
         )
 
-    # เปลี่ยนสถานะเพื่อเก็บไว้ดูประวัติ
+    if item.deleted_at:
+        return {
+            "status": "success",
+            "message": "รายการนี้อยู่ในประวัติแล้ว",
+        }
+
+    # เก็บ deleted_at เพื่อใช้ระบบลบข้อมูลหลังครบ 30 วัน
     item.status = "cancelled"
+    item.deleted_at = utcnow()
     try:
         db.commit()
     except Exception:
@@ -232,12 +249,13 @@ def delete_appointment(appointment_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="ไม่สามารถอัปเดตข้อมูลได้")
     return {
         "status": "success",
-        "message": "ย้ายรายการไปที่หน้าประวัติเรียบร้อยแล้ว",
+        "retention_days": RETENTION_DAYS,
+        "message": f"ย้ายรายการไปที่หน้าประวัติเรียบร้อยแล้ว ข้อมูลจะถูกลบถาวรหลัง {RETENTION_DAYS} วัน",
     }
 
 
 # ==========================================
-# 3. API กู้คืนข้อมูล (Restore ปรับสถานะเป็น backup)
+# 3. API กู้คืนข้อมูล (Restore ปรับสถานะเป็น backup + ล้าง deleted_at)
 # ==========================================
 @app.put("/api/appointments/{appointment_id}/restore")
 def restore_appointment(appointment_id: int, db: Session = Depends(get_db)):
@@ -251,8 +269,9 @@ def restore_appointment(appointment_id: int, db: Session = Depends(get_db)):
             status_code=404, detail="ไม่พบรายการนัดหมายที่ต้องการกู้คืน"
         )
 
-    # เปลี่ยนสถานะเป็น backup ตามที่ต้องการ
+    # เปลี่ยนสถานะเป็น backup และล้าง deleted_at (หยุดนับเวลาการลบถาวร)
     item.status = "backup"
+    item.deleted_at = None
     try:
         db.commit()
     except Exception:
@@ -261,4 +280,35 @@ def restore_appointment(appointment_id: int, db: Session = Depends(get_db)):
     return {
         "status": "success",
         "message": "กู้คืนรายการเป็นสถานะ backup สำเร็จ",
+    }
+
+
+# ==========================================
+# 4. API ล้างข้อมูลที่ครบกำหนดลบถาวร (deleted_at เกิน 30 วัน)
+#    ใช้กับ cron เรียกได้ เช่น: curl -X POST http://localhost:8000/api/cleanup/purge
+# ==========================================
+@app.post("/api/cleanup/purge")
+def purge_expired_records(db: Session = Depends(get_db)):
+    cutoff = utcnow()
+    expired = []
+    rows = (
+        db.query(Appointment)
+        .filter(Appointment.deleted_at.isnot(None))
+        .all()
+    )
+    for row in rows:
+        if row.deleted_at and (cutoff - row.deleted_at) > timedelta(days=RETENTION_DAYS):
+            expired.append(row.appointment_id)
+    if expired:
+        db.query(Appointment).filter(Appointment.appointment_id.in_(expired)).delete(synchronize_session=False)
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="ไม่สามารถลบข้อมูลที่หมดอายุได้")
+    return {
+        "status": "success",
+        "purged_count": len(expired),
+        "retention_days": RETENTION_DAYS,
+        "message": f"ลบข้อมูลที่ถึงกำหนดออกจากระบบแล้วจำนวน {len(expired)} รายการ",
     }
