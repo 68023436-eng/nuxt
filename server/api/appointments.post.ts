@@ -182,12 +182,12 @@ export default defineEventHandler(async (event) => {
 
     return { success: true, data: data?.[0] || null }
   } catch (err: any) {
-    if (err.statusCode) throw err
+    if (err?.statusCode) throw err
 
     console.error('Unexpected server error:', err)
     throw createError({
       statusCode: 500,
-      statusMessage: `เกิดข้อผิดพลาดที่เซิร์ฟเวอร์: ${err?.message || err}`,
+      statusMessage: 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองอีกครั้งในภายหลัง',
     })
   }
 })

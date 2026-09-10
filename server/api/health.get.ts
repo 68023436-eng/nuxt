@@ -15,9 +15,10 @@ export default defineEventHandler(async (event) => {
       .limit(1)
 
     if (error) {
+      console.error('Health check Supabase error:', error.message)
       throw createError({
         statusCode: 500,
-        statusMessage: `เชื่อมต่อ Supabase ล้มเหลว: ${error.message}`,
+        statusMessage: 'เชื่อมต่อฐานข้อมูลล้มเหลว',
       })
     }
 

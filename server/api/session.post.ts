@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
       if (!matched) {
         throw createError({
           statusCode: 401,
-          statusMessage: 'ไม่พบผู้ใช้ "ชื่อ + บทบาท" นี้ในระบบ กรุณาตรวจสอบชื่อหรือเลือกบทบาทใหม่',
+          statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ หรือเลือกบทบาทเจ้าหน้าที่ผิดพลาด',
         })
       }
 
@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
       if (!storedPhone || storedPhone !== inputPhone) {
         throw createError({
           statusCode: 401,
-          statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ กรุณาตรวจสอบอีกครั้ง',
+          statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ หรือเลือกบทบาทเจ้าหน้าที่ผิดพลาด',
         })
       }
     }

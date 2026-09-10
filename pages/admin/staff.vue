@@ -161,7 +161,7 @@
                 <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
                   รหัสผ่าน <span class="tw-text-xs tw-text-slate-400">{{ editingId ? '(เว้นว่าง = ไม่เปลี่ยน)' : '' }}</span>
                 </label>
-                <input v-model="form.password" type="password" autocomplete="new-password" :required="!editingId" minlength="6" placeholder="อย่างน้อย 6 ตัวอักษร"
+                <input v-model="form.password" type="password" autocomplete="new-password" :required="!editingId" minlength="8" placeholder="อย่างน้อย 8 ตัวอักษร"
                   class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400" />
               </div>
 
@@ -342,8 +342,8 @@ const saveStaff = async () => {
     formError.value = 'จำเป็นต้องมีอีเมล (ใช้เป็นบัญชีในระบบ)'
     return
   }
-  if (form.password && form.password.length < 6) {
-    formError.value = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'
+  if (form.password && form.password.length < 8) {
+    formError.value = 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร'
     return
   }
   if (!editingId.value && !form.password) {
