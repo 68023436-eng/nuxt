@@ -43,8 +43,8 @@ export default defineEventHandler(async (event) => {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw createError({ statusCode: 400, statusMessage: 'รูปแบบอีเมลไม่ถูกต้อง' })
     }
-    if (password && password.length < 6) {
-      throw createError({ statusCode: 400, statusMessage: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' })
+    if (password && password.length < 8) {
+      throw createError({ statusCode: 400, statusMessage: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' })
     }
 
     const client = await serverSupabaseClient(event)
@@ -102,7 +102,7 @@ export default defineEventHandler(async (event) => {
         console.error('Update auth user error:', authErr.message)
         throw createError({
           statusCode: 500,
-          statusMessage: `ไม่สามารถอัปเดตบัญชีผู้ใช้ได้ (${authErr.message})`,
+          statusMessage: 'ไม่สามารถอัปเดตบัญชีผู้ใช้ได้',
         })
       }
     }
