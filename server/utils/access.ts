@@ -126,7 +126,7 @@ export function requireAnyRole(event: any, roles: AccessRole[]): AccessSession {
 export function requirePermission(event: any, perm: AccessPermission): AccessSession {
   const session = requireSession(event)
   if (!hasPermission(session, perm)) {
-    let label = perm
+    let label: string = perm
     if (perm === 'create') label = 'การกรอกข้อมูล/สร้างใบนัด'
     else if (perm === 'cancel') label = 'การยกเลิกนัดหมาย'
     else if (perm === 'restore') label = 'การกู้คืนข้อมูล'

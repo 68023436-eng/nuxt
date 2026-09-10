@@ -20,13 +20,22 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
 
     // ตรวจสอบว่ามี record อยู่จริงก่อนลบ (ใช้ appointment_id ตาม schema จริง)
+    // ใช้ maybeSingle() แทน single(): 0 แถว → null (ไม่ error) แยกแยะจาก "มีซ้ำ" ได้ชัดเจน
     const { data: existing, error: findError } = await client
       .from('appointments')
       .select('appointment_id, status, deleted_at')
       .eq('appointment_id', numericId)
-      .single()
+      .maybeSingle()
 
-    if (findError || !existing) {
+    if (findError) {
+      console.error('Find appointment error:', JSON.stringify(findError))
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'ไม่สามารถตรวจสอบรายการนัดหมายนี้ได้',
+      })
+    }
+
+    if (!existing) {
       throw createError({
         statusCode: 404,
         statusMessage: 'ไม่พบรายการนัดหมายนี้',
@@ -46,7 +55,7 @@ export default defineEventHandler(async (event) => {
       .eq('appointment_id', numericId)
 
     if (updateError) {
-      console.error('Server soft-delete error:', updateError.message)
+      console.error('Server soft-delete error:', JSON.stringify(updateError))
       throw createError({
         statusCode: 500,
         statusMessage: 'ไม่สามารถอัปเดตสถานะการลบข้อมูลได้',

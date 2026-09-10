@@ -4,20 +4,20 @@
     <Sidebar />
 
     <!-- Main Content -->
-    <div class="tw-flex-1 tw-p-8">
+    <div class="tw-flex-1 tw-min-w-0 tw-p-4 md:tw-p-8">
       <!-- Header Banner พร้อมปุ่มเพิ่ม -->
-      <div class="tw-flex tw-justify-between tw-items-center tw-bg-emerald-100 tw-border-l-8 tw-border-l-emerald-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
+      <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-emerald-100 tw-border-l-8 tw-border-l-emerald-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
         <div>
           <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">จัดการเจ้าหน้าที่</h1>
           <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Manage Staff Accounts &amp; Access</p>
         </div>
-        <div class="tw-flex tw-items-center tw-gap-3">
+        <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
           <button
             @click="fetchStaff"
             :disabled="loading"
             class="tw-bg-white hover:tw-bg-emerald-50 disabled:tw-bg-gray-100 tw-text-emerald-800 tw-border tw-border-emerald-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
           >
-            {{ loading ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล' }}
+            <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล' }}</span>
           </button>
           <button
             @click="openCreate"
@@ -41,22 +41,24 @@
       </div>
 
       <!-- Empty -->
-      <div v-else-if="staffList.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-12 tw-rounded-2xl tw-text-center">
+      <div v-else-if="staffList.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-8 sm:tw-p-12 tw-rounded-2xl tw-text-center">
         <p class="tw-text-gray-400 tw-text-lg">ยังไม่มีเจ้าหน้าที่ในระบบ</p>
+        <p class="tw-text-gray-400 tw-text-sm tw-mt-1">กดปุ่ม "+ เพิ่มเจ้าหน้าที่" เพื่อสร้างบัญชีแรก</p>
       </div>
 
       <!-- Table -->
       <div v-else class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-100 tw-overflow-hidden">
-        <table class="tw-w-full tw-text-sm tw-text-left">
+        <div class="tw-overflow-x-auto">
+        <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[900px]">
           <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
             <tr>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ลำดับ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ชื่อ-นามสกุล</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">บทบาท</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">เบอร์โทร</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">อีเมล</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">สถานะ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-text-center">จัดการ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">ลำดับ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[220px]">ชื่อ-นามสกุล</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[150px]">บทบาท</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[130px]">เบอร์โทร</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[220px]">อีเมล</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px] tw-text-center">จัดการ</th>
             </tr>
           </thead>
           <tbody>
@@ -66,24 +68,24 @@
               :class="{ 'tw-bg-slate-50': isSelf(item) }"
               class="tw-border-b tw-border-slate-100 hover:tw-bg-slate-50 tw-transition-colors"
             >
-              <td class="tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
-              <td class="tw-px-5 tw-py-4">
+              <td class="tw-px-5 tw-py-4 tw-text-gray-500 tw-whitespace-nowrap">{{ index + 1 }}</td>
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
                 <div class="tw-flex tw-items-center tw-gap-2">
                   <span class="tw-font-medium tw-text-gray-800">{{ item.full_name }}</span>
                   <span v-if="isSelf(item)" class="tw-inline-block tw-bg-sky-100 tw-text-sky-700 tw-text-xs tw-font-medium tw-px-2 tw-py-0.5 tw-rounded-full">คุณ</span>
                 </div>
               </td>
-              <td class="tw-px-5 tw-py-4">
-                <span :class="roleBadgeClass(item.role)">{{ roleLabel(item.role) }}</span>
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
+                <span :class="ROLE_BADGE_CLASSES[item.role] || 'tw-bg-slate-100 tw-text-slate-700'">{{ roleLabel(item.role) }}</span>
               </td>
-              <td class="tw-px-5 tw-py-4 tw-text-gray-700">{{ item.phone_number || '-' }}</td>
-              <td class="tw-px-5 tw-py-4 tw-text-gray-700">{{ item.email || '-' }}</td>
-              <td class="tw-px-5 tw-py-4">
+              <td class="tw-px-5 tw-py-4 tw-text-gray-700 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</td>
+              <td class="tw-px-5 tw-py-4 tw-text-gray-700 tw-whitespace-nowrap">{{ item.email || '-' }}</td>
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
                 <span :class="item.is_active ? 'tw-bg-emerald-100 tw-text-emerald-700' : 'tw-bg-gray-200 tw-text-gray-500'" class="tw-inline-block tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
                   {{ item.is_active ? 'ใช้งาน' : 'ปิดใช้งาน' }}
                 </span>
               </td>
-              <td class="tw-px-5 tw-py-4 tw-text-center">
+              <td class="tw-px-5 tw-py-4 tw-text-center tw-whitespace-nowrap">
                 <div class="tw-flex tw-justify-center tw-gap-2">
                   <button
                     @click="openEdit(item)"
@@ -105,6 +107,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
         <div class="tw-px-6 tw-py-3 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-sm tw-text-gray-500">
           ทั้งหมด {{ staffList.length }} รายการ (ไม่สามารถแก้ไข/ลบบัญชีของตัวเองได้)
         </div>
@@ -135,7 +138,7 @@
                 <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">บทบาท <span class="tw-text-red-500">*</span></label>
                 <select v-model="form.role"
                   class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400 tw-bg-white">
-                  <option v-for="r in staffRoles" :key="r" :value="r">{{ roleLabel(r) }}</option>
+                  <option v-for="r in STAFF_ROLES" :key="r" :value="r">{{ roleLabel(r) }}</option>
                 </select>
               </div>
 
@@ -220,7 +223,7 @@
 </template>
 
 <script setup>
-import { ROLE_LABELS } from '~/constants/roles'
+import { ROLE_LABELS, ROLE_BADGE_CLASSES, STAFF_ROLES } from '~/constants/roles'
 
 // ============================================================
 // Composables
@@ -231,8 +234,6 @@ const { session, refresh } = useSession()
 // ============================================================
 // State
 // ============================================================
-
-const staffRoles = ['Admin', 'Clinic_staff', 'Security_guard']
 
 const staffList = ref([])
 const loading = ref(false)
@@ -263,15 +264,6 @@ const form = reactive(emptyForm())
 
 function roleLabel(role) {
   return ROLE_LABELS[role] || role
-}
-
-function roleBadgeClass(role) {
-  const map = {
-    Admin: 'tw-bg-orange-100 tw-text-orange-700',
-    Clinic_staff: 'tw-bg-emerald-100 tw-text-emerald-700',
-    Security_guard: 'tw-bg-blue-100 tw-text-blue-700',
-  }
-  return map[role] || 'tw-bg-slate-100 tw-text-slate-700'
 }
 
 // บัญชีของตัวเอง = ชื่อ+บทบาทตรงกับ session (กันแก้ไข/ลบตัวเอง)
@@ -430,26 +422,3 @@ onMounted(async () => {
   fetchStaff()
 })
 </script>
-
-<style scoped>
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.25s ease;
-}
-.modal-enter-active .tw-relative,
-.modal-leave-active .tw-relative {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-from .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-.modal-leave-to .tw-relative {
-  transform: scale(0.95) translateY(10px);
-  opacity: 0;
-}
-</style>

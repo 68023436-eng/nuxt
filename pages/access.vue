@@ -101,18 +101,11 @@
 </template>
 
 <script setup>
-import { ROLE_COLORS } from '~/constants/roles'
+import { ROLE_COLORS, ROLE_ICONS } from '~/constants/roles'
 
 definePageMeta({
   middleware: false,
 })
-
-const ROLE_ICONS = {
-  Admin: '👑',
-  Clinic_staff: '🩺',
-  Security_guard: '🛡️',
-  Patient: '👤',
-}
 
 const { login, refresh } = useSession()
 const roleOptions = useRoleOptions()
@@ -126,11 +119,14 @@ const form = reactive({
 const isSubmitting = ref(false)
 const errorMsg = ref('')
 
-// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าใบนัดทันที
+// แต่ละบทบาทมีหน้าแรกของตัวเอง (รปภ. → ตรวจสอบ QR ส่วนที่เหลือ → หน้าหลัก)
+const homePathFor = (role) => (role === 'Security_guard' ? '/verify' : '/')
+
+// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าหลักของบทบาทนั้นทันที
 onMounted(async () => {
   const s = await refresh()
   if (s) {
-    navigateTo('/appointments')
+    navigateTo(homePathFor(s.role))
   }
 })
 
@@ -138,8 +134,8 @@ const handleLogin = async () => {
   errorMsg.value = ''
   isSubmitting.value = true
   try {
-    await login({ ...form })
-    navigateTo('/appointments')
+    const s = await login({ ...form })
+    navigateTo(homePathFor(s?.role))
   } catch (error) {
     errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่'
   } finally {

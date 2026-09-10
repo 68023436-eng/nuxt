@@ -43,3 +43,17 @@ export const ROLE_ICONS: Record<AccessRole, string> = {
   Security_guard: '🛡️',
   Patient: '👤',
 }
+
+export const ROLE_BADGE_CLASSES: Record<AccessRole, string> = {
+  Admin: 'tw-bg-orange-100 tw-text-orange-700 tw-rounded-full tw-py-1 tw-px-2',
+  Clinic_staff: 'tw-bg-emerald-100 tw-text-emerald-700 tw-rounded-full tw-py-1 tw-px-2',
+  Security_guard: 'tw-bg-blue-100 tw-text-blue-700 tw-rounded-full tw-py-1 tw-px-2',
+  Patient: 'tw-bg-slate-100 tw-text-slate-700',
+}
+
+export const ROLE_AVATAR_CLASSES: Record<AccessRole, string> = {
+  Admin: 'tw-bg-gradient-to-br tw-from-orange-400 tw-to-red-500',
+  Clinic_staff: 'tw-bg-gradient-to-br tw-from-emerald-400 tw-to-green-500',
+  Security_guard: 'tw-bg-gradient-to-br tw-from-blue-400 tw-to-indigo-500',
+  Patient: 'tw-bg-slate-400',
+}

@@ -298,8 +298,8 @@
       <div class="tw-mb-6 tw-bg-indigo-50 tw-border tw-border-indigo-200 tw-p-4 tw-rounded-xl tw-text-indigo-800 tw-text-sm tw-flex tw-items-start tw-gap-3">
         <div>
           <p class="tw-text-indigo-600 tw-mt-0.5">
-            รายการที่ถูกลบจะอยู่ในประวัติเป็นเวลา 30 วัน (1 เดือน) 
-            ซึ่งสามารถกู้คืนได้ตลอดช่วงเวลานี้ หากครบ 30 วัน ข้อมูลจะถูกลบออกจากระบบอัตโนมัติโดยไม่สามารถกู้คืนได้อีก
+            รายการที่ถูกลบจะอยู่ในประวัติเป็นเวลา {{ RETENTION_DAYS }} วัน (1 เดือน) 
+            ซึ่งสามารถกู้คืนได้ตลอดช่วงเวลานี้ หากครบ {{ RETENTION_DAYS }} วัน ข้อมูลจะถูกลบออกจากระบบอัตโนมัติโดยไม่สามารถกู้คืนได้อีก
           </p>
         </div>
       </div>
@@ -383,7 +383,7 @@
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">แผนกตรวจ</th>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">วันและเวลานัดหมาย</th>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[210px]">ลบถาวรเมื่อครบ 30 วัน</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[210px]">ลบถาวรเมื่อครบ {{ RETENTION_DAYS }} วัน</th>
               <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px] tw-text-center">จัดการ</th>
             </tr>
           </thead>
@@ -716,6 +716,8 @@
 // ============================================================
 // Composables
 // ============================================================
+
+import { RETENTION_DAYS } from '~/constants/appointments'
 
 const { statusClass, statusLabel, formatDate, formatDateTime, daysUntilPurge, purgeNotice } = useAppointment()
 

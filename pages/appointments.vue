@@ -4,15 +4,15 @@
     <Sidebar />
 
     <!-- Main Content -->
-    <div class="tw-flex-1 tw-p-8">
+    <div class="tw-flex-1 tw-min-w-0 tw-p-4 md:tw-p-8">
       <!-- Header Banner พร้อมปุ่มรีเฟรช -->
-      <div class="tw-flex tw-justify-between tw-items-center tw-bg-amber-100 tw-border-l-8 tw-border-l-amber-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
+      <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-amber-100 tw-border-l-8 tw-border-l-amber-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
         <div>
           <h1 class="tw-text-2xl tw-font-bold tw-text-black">รายการนัดหมาย</h1>
           <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Hospital Appointments &amp; Parking Management</p>
         </div>
 
-        <div class="tw-flex tw-items-center tw-gap-3">
+        <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
           <button 
             @click="fetchAppointments" 
             :disabled="loading"
@@ -36,23 +36,24 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="activeAppointments.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-12 tw-rounded-2xl tw-text-center">
+      <div v-else-if="activeAppointments.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-8 sm:tw-p-12 tw-rounded-2xl tw-text-center">
         <p class="tw-text-gray-400 tw-text-lg">ยังไม่มีรายการนัดหมายที่เปิดใช้งานอยู่</p>
         <p class="tw-text-gray-300 tw-text-sm tw-mt-1">กรุณาไปหน้า "กรอกข้อมูล" เพื่อเพิ่มใบนัดใหม่ หรือตรวจสอบรายการที่ย้ายไปที่หน้า "ประวัติ"</p>
       </div>
 
       <!-- Data Table -->
       <div v-else class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-100 tw-overflow-hidden">
-        <table class="tw-w-full tw-text-sm tw-text-left">
+        <div class="tw-overflow-x-auto">
+        <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[920px]">
           <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
             <tr>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ลำดับ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ชื่อผู้ป่วย / เบอร์โทร</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ทะเบียนรถ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">แผนกตรวจ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วันนัดหมาย / เวลา</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">สถานะ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-text-center">จัดการ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">ลำดับ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">ชื่อผู้ป่วย / เบอร์โทร</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[140px]">ทะเบียนรถ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">แผนกตรวจ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">วันนัดหมาย / เวลา</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[150px] tw-text-center">จัดการ</th>
             </tr>
           </thead>
           <tbody>
@@ -62,16 +63,16 @@
               class="tw-border-b tw-border-slate-100 hover:tw-bg-slate-50 tw-transition-colors"
             >
               <!-- ลำดับ -->
-              <td class="tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
+              <td class="tw-px-5 tw-py-4 tw-text-gray-500 tw-whitespace-nowrap">{{ index + 1 }}</td>
               
               <!-- ชื่อและเบอร์โทรศัพท์ -->
               <td class="tw-px-5 tw-py-4">
-                <div class="tw-font-medium tw-text-gray-800">{{ item.patient_name }}</div>
-                <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5">{{ item.phone_number || '-' }}</div>
+                <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[190px]" :title="item.patient_name">{{ item.patient_name }}</div>
+                <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</div>
               </td>
 
               <!-- ทะเบียนรถยนต์ -->
-              <td class="tw-px-5 tw-py-4">
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
                 <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
                   {{ item.license_plate }}
                 </span>
@@ -79,24 +80,24 @@
 
               <!-- แผนกตรวจ -->
               <td class="tw-px-5 tw-py-4 tw-text-gray-700">
-                {{ item.department_name || item.dept_id || '-' }}
+                <span class="tw-line-clamp-2">{{ item.department_name || item.dept_id || '-' }}</span>
               </td>
 
               <!-- วันและเวลา -->
-              <td class="tw-px-5 tw-py-4">
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
                 <div class="tw-text-gray-700">{{ formatDate(item.appointment_date) }}</div>
                 <div class="tw-text-xs tw-text-amber-600 tw-font-medium tw-mt-0.5">{{ item.time_slot }}</div>
               </td>
 
               <!-- สถานะ -->
-              <td class="tw-px-5 tw-py-4">
+              <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
                 <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
                   {{ statusLabel(item.status) }}
                 </span>
               </td>
 
               <!-- ปุ่มจัดการ -->
-              <td class="tw-px-5 tw-py-4 tw-text-center">
+              <td class="tw-px-5 tw-py-4 tw-text-center tw-whitespace-nowrap">
                 <div class="tw-flex tw-justify-center tw-gap-2">
                   <button 
                     @click="openDetail(item)"
@@ -117,6 +118,7 @@
             </tr>
           </tbody>
         </table>
+        </div>
 
         <!-- Summary -->
         <div class="tw-px-6 tw-py-3 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-sm tw-text-gray-500">
@@ -332,7 +334,7 @@
                 (ID: {{ itemToDelete?.appointment_id }}) ใช่หรือไม่?
               </p>
               <p class="tw-text-xs tw-text-amber-600 tw-bg-amber-50 tw-p-2.5 tw-rounded-lg tw-border tw-border-amber-200">
-                รายการนี้จะถูกย้ายไปเก็บในหน้าประวัติเป็นเวลา <strong>30 วัน</strong> 
+                รายการนี้จะถูกย้ายไปเก็บในหน้าประวัติเป็นเวลา <strong>{{ RETENTION_DAYS }} วัน</strong> 
                 เมื่อครบกำหนดจะถูกลบออกจากระบบอัตโนมัติ — คุณสามารถกู้คืนได้ก่อนครบกำหนด
               </p>
             </div>
@@ -369,6 +371,7 @@
 // ============================================================
 
 import { buildParkingDestination, buildClinicDestination } from '~/constants/clinic'
+import { RETENTION_DAYS } from '~/constants/appointments'
 
 const { statusClass, statusLabel, formatDate, formatDateTime } = useAppointment()
 
@@ -450,10 +453,11 @@ const confirmDeleteAppointment = async () => {
     }
 
     closeDeleteModal()
-    alert('ลบและย้ายข้อมูลไปหน้าประวัติเรียบร้อยแล้ว ข้อมูลจะถูกลบถาวรหลังครบ 30 วัน')
+    alert(`ลบและย้ายข้อมูลไปหน้าประวัติเรียบร้อยแล้ว ข้อมูลจะถูกลบถาวรหลังครบ ${RETENTION_DAYS} วัน`)
   } catch (error) {
-    alert('เกิดข้อผิดพลาดในการลบ: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
-    console.error('Delete error:', error)
+    const detail = error?.data?.statusMessage || error?.data?.message || error?.message || 'ไม่ทราบสาเหตุ'
+    alert('เกิดข้อผิดพลาดในการลบ: ' + detail)
+    console.error('Delete error details:', { status: error?.status, statusCode: error?.statusCode, detail, full: error })
   } finally {
     deletingId.value = null
   }
