@@ -1,6 +1,7 @@
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { resolve } from 'node:path'
+import { defineNuxtModule } from '@nuxt/kit'
 
 /**
  * ป้องกันบั๊ก dev restart บน Windows (Nuxt + @nuxtjs/tailwindcss):
@@ -38,13 +39,13 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxtjs/supabase',
-    {
-      setup(nuxt) {
+    defineNuxtModule({
+      setup(_options, nuxt) {
         nuxt.hook('modules:done', () => {
           nuxt.options.css = dedupeCssEntries(nuxt.options.css || [])
         })
       },
-    },
+    }),
   ],
 
   supabase: {

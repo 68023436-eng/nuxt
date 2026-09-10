@@ -8,14 +8,16 @@ import { normalizeName, normalizePhone } from '~/utils/name'
  * หน้า appointments กรองเอาเฉพาะ active/backup
  * หน้า history กรองเอาเฉพาะ cancelled/completed
  *
- * ระบบลบแบบเก็บ 30 วัน: รายการที่ deleted_at เกิน 30 วัน จะถูกลบออกจากระบบ
- * (ทั้งฝั่งฐานข้อมูลผ่าน cleanup และกรองฝั่ง API ไม่ให้แสดง)
+ * เน้นสิทธิ์ตามบทบาท:
+ * - Admin / Clinic_staff → เห็นทั้งหมด
+ * - Patient → เห็นเฉพาะนัดของตัวเอง (ผูกจาก session: ชื่อ + เบอร์)
+ * - Security_guard → ปฏิเสธ (ดูได้เฉพาะหน้า ตรวจสอบ QR / ประวัติการตรวจสอบ)
  */
 export default defineEventHandler(async (event) => {
   try {
     const { role, ...session } = requirePermission(event, 'view')
 
-    // รปภ. ต้องไม่เห็นข้อมูลนัดหมาย/ผู้ป่วย (ดูได้เฉพาะหน้า ตรวจสอบQR + ประวัติของตัวเอง)
+    // รปภ. ต้องไม่เห็นข้อมูลนัดหมาย/ผู้ป่วย
     if (role === 'Security_guard') {
       throw createError({
         statusCode: 403,
@@ -26,8 +28,6 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const retentionDays = RETENTION_DAYS
 
-    // Patient ดูได้เฉพาะนัดของตัวเองเท่านั้น (ผูกจาก session: ชื่อ + เบอร์)
-    // — ไม่รับ user_id/patient_id จาก query เลย ป้องกันการแก้พารามิเตอร์เพื่อดูของคนอื่น
     const query = client
       .from('appointments')
       .select(`
@@ -48,8 +48,7 @@ export default defineEventHandler(async (event) => {
       `)
 
     if (role === 'Patient') {
-      // ผูกเจ้าของนัดจาก session (ไม่รับ user_id/patient_id จาก client)
-      // normalize ชื่อ/เบอร์ให้ตรงกับที่ clinic เก็บไว้ตอนสร้าง (server/utils/name.ts)
+      // ผูกเจ้าของนัดจาก session (ไม่รับ patient_id จาก client เพื่อป้องกันการแก้พารามิเตอร์)
       query
         .eq('phone_number', normalizePhone(session.phone_number))
         .eq('patient_name', normalizeName(session.full_name))
@@ -77,28 +76,24 @@ export default defineEventHandler(async (event) => {
     const RETENTION_MS = retentionDays * 24 * 60 * 60 * 1000
 
     // แปลงผล embed ให้เป็นฟิลด์ตรงๆ ที่หน้าเว็บใช้ (department_name, building_name)
-    // พร้อมกรองรายการที่ deleted_at เกิน 30 วันออก (ข้อมูลถูกลบถาวรแล้ว)
-    const filtered = (data || []).map((item: any) => ({
-      ...item,
-      department_name: item.department?.dept_name_th || item.department?.[0]?.dept_name_th || null,
-      building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
-      department: undefined,
-      location: undefined,
-    })).filter((item: any) => {
-      if (!item.deleted_at) return true
-      const deletedTime = new Date(item.deleted_at).getTime()
-      return now - deletedTime < RETENTION_MS
-    })
-
-    // แนบเหลือวันที่จะถูกลบถาวร เพื่อให้หน้าเว็บแสดง "เหลือ X วัน"
-    return filtered.map((item: any) => {
-      if (item.deleted_at) {
-        const elapsed = now - new Date(item.deleted_at).getTime()
-        item.days_until_purge = Math.max(0, Math.ceil((RETENTION_MS - elapsed) / (24 * 60 * 60 * 1000)))
-      } else {
-        item.days_until_purge = null
+    // พร้อมแนบ days_until_purge ตาม clock ของเซิร์ฟเวอร์ (หน้า history แสดง "เหลือ X วัน")
+    return (data || []).map((item: any) => {
+      const flat = {
+        ...item,
+        department_name: item.department?.dept_name_th || item.department?.[0]?.dept_name_th || null,
+        building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
+        department: undefined,
+        location: undefined,
       }
-      return item
+
+      if (flat.deleted_at) {
+        const elapsed = now - new Date(flat.deleted_at).getTime()
+        flat.days_until_purge = Math.max(0, Math.ceil((RETENTION_MS - elapsed) / (24 * 60 * 60 * 1000)))
+      } else {
+        flat.days_until_purge = null
+      }
+
+      return flat
     })
   } catch (err: any) {
     if (err.statusCode) throw err

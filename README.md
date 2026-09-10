@@ -43,13 +43,3 @@ Locally preview production build:
 yarn preview
 
 ```
-
-Run python file or libary
-
-```bash / cmd / powersell
-
-# py uvicron
-uvicorn main:app --reload --port 8000
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.

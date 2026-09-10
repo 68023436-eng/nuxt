@@ -5,6 +5,7 @@ import { composeFullName, normalizePhone } from '~/utils/name'
 /** ฟังก์ชัน sanitize ข้อความป้องกัน XSS */
 function sanitizeString(str: string): string {
   return str
+    .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
@@ -53,7 +54,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // 3. ตรวจสอบเบอร์โทรศัพท์ (ถ้าส่งมา ต้องเป็นตัวเลข 9-10 หลัก)
-    let phoneNumber: string | null = null
+    //    คอลัมน์เป็น NOT NULL ใน DB — ถ้าไม่ระบุให้เก็บเป็น '' แทน null (กัน error 500)
+    let phoneNumber = ''
     if (body.phone_number) {
       const cleanPhone = normalizePhone(String(body.phone_number))
       if (!PHONE_REGEX.test(cleanPhone)) {
@@ -66,7 +68,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // 4. ตรวจสอบทะเบียนรถ (ถ้าส่งมา ต้องไม่ยาวเกิน 20 ตัวอักษร)
-    let licensePlate: string | null = null
+    //    คอลัมน์เป็น NOT NULL ใน DB — ถ้าไม่ระบุให้เก็บเป็น '' แทน null
+    let licensePlate = ''
     if (body.license_plate) {
       licensePlate = sanitizeString(String(body.license_plate))
       if (licensePlate.length > 20) {
@@ -89,7 +92,7 @@ export default defineEventHandler(async (event) => {
 
     // 6. ตรวจสอบ time_slot (ต้องเป็นค่าที่กำหนด)
     const timeSlot = sanitizeString(String(body.time_slot))
-    if (!ALLOWED_TIME_SLOTS.includes(timeSlot)) {
+    if (!(ALLOWED_TIME_SLOTS as readonly string[]).includes(timeSlot)) {
       throw createError({
         statusCode: 400,
         statusMessage: 'ช่วงเวลาต้องเป็น 09:00 - 12:00 หรือ 13:00 - 16:00',

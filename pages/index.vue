@@ -23,7 +23,7 @@
 
       <!-- Month Selector -->
       <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3 tw-mb-6">
-        <label class="tw-text-sm tw-font-medium tw-text-gray-700" for="dash-month">เลือเดือน:</label>
+        <label class="tw-text-sm tw-font-medium tw-text-gray-700" for="dash-month">เลือกเดือน:</label>
         <input
           id="dash-month"
           v-model="month"
