@@ -43,24 +43,30 @@ function hitRateLimit(event: any, key: string): { limit: number; remaining: numb
   const bucketKey = `${key}:${ip}`
   const now = Date.now()
 
-  // ทำความสะอาด bucket เก่าเป็นครั้งคราว (กัน memory leak)
+  // 1. ทำความสะอาด bucket เก่าเป็นครั้งคราว (กัน memory leak)
   if (buckets.size > MAX_BUCKETS) {
     for (const [k, times] of buckets) {
-      if (now - times[times.length - 1] > 60 * 60 * 1000) buckets.delete(k)
+      const lastTime = times[times.length - 1]
+      if (lastTime && (now - lastTime > 60 * 60 * 1000)) {
+        buckets.delete(k)
+      }
     }
   }
 
-  const times = (buckets.get(bucketKey) || []).filter((t) => now - t < rule.windowMs)
+  // 2. ดึงประวัติการยิง requests ของ IP นี้มาเช็ก
+  let times = buckets.get(bucketKey) || []
+  times = times.filter((t) => now - t < rule.windowMs)
 
+  // ถ้าจำนวนครั้งเกินโควตาที่กำหนด (โดนบล็อก)
   if (times.length >= rule.limit) {
-    throw createError({
-      statusCode: 429,
-      statusMessage: 'มีการร้องขอมากเกินไปในเวลาอันสั้น กรุณาลองใหม่ในภายหลัง',
-    })
+    return { limit: rule.limit, remaining: 0 }
   }
 
+  // 3. บันทึกเวลารอบล่าสุดลงถัง
   times.push(now)
   buckets.set(bucketKey, times)
+
+  // 4. จุดที่ต้องมีเสมอ: คืนค่าโควตาที่เหลือ
   return { limit: rule.limit, remaining: rule.limit - times.length }
 }
 

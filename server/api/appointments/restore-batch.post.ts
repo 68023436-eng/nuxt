@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
 
     // กู้คืนทุก id พร้อมกันใน query เดียว (set status='backup' + ล้าง deleted_at)
-    const { data: updated, error: updateError } = await client
+    const { data: updated, error: updateError } = await (client as any)
       .from('appointments')
       .update({ status: 'backup', deleted_at: null })
       .in('appointment_id', numericIds)

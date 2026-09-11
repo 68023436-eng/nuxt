@@ -43,13 +43,13 @@ export default defineEventHandler(async (event) => {
     }
 
     // ถ้าถูกลบไปแล้ว (มี deleted_at) ไม่ต้องลบซ้ำ
-    if (existing.deleted_at) {
-      return { success: true, message: 'รายการนี้อยู่ในประวัติแล้ว', deleted_at: existing.deleted_at, retention_days: RETENTION_DAYS }
+    if ((existing as any).deleted_at) {
+      return { success: true, message: 'รายการนี้อยู่ในประวัติแล้ว', deleted_at: (existing as any).deleted_at, retention_days: RETENTION_DAYS }
     }
 
     // Soft-delete: เก็บ deleted_at = เวลาปัจจุบัน (ข้อมูลจะค้างในประวัติ 30 วัน แล้วถูกลบถาวรอัตโนมัติ)
     const deleteTime = new Date().toISOString()
-    const { error: updateError } = await client
+    const { error: updateError } = await (client as any)
       .from('appointments')
       .update({ deleted_at: deleteTime, status: 'cancelled' })
       .eq('appointment_id', numericId)

@@ -1,52 +1,50 @@
--- ============================================================
+-- ===================================================
 -- Migration: สร้างตาราง scan_history สำหรับบันทึกผลการตรวจสอบของ รปภ.
---
--- วิธีรัน:
---   psql "$DATABASE_URL" -f scripts/add_scan_history_table.sql
---   หรือรันผ่าน Supabase Dashboard > SQL Editor
---
--- ผลลัพธ์:
---   - สร้างตาราง scan_history (ถ้ายังไม่มี) + เพิ่มคอลัมน์ที่ขาด (ถ้าตารางเคยสร้างด้วย schema เก่า)
---   - บันทึกเฉพาะรายการที่ รปภ. ตรวจสอบจริง (สแกน QR / ค้นหาเบอร์โทร)
---   - ไม่กระทบตาราง appointments / ข้อมูลนัดหมายเดิม
---   - RLS เปิด + policy SELECT/INSERT อนุญาต (ให้แอปใช้งานผ่าน service key)
---
--- มigrations นี้รันกี่ครั้งก็ได้ (idempotent)
--- ============================================================
+-- ===================================================
 
--- สร้างตาราง (ถ้ายังไม่มี) พร้อมคอลัมน์ทั้งหมดที่หน้า ประวัติการตรวจสอบ ใช้
+-- 1. สร้างตารางบันทึกประวัติการสแกน
 CREATE TABLE IF NOT EXISTS public.scan_history (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   method TEXT NOT NULL CHECK (method IN ('qr', 'phone')),
   qr_token TEXT,
-  phone_number TEXT,
+  phone_number VARCHAR(20),
   patient_name TEXT,
-  appointment_id TEXT,
+  appointment_id BIGINT, -- ปรับเป็น BIGINT ให้ตรงกับ numericId ของตาราง appointments
   result TEXT NOT NULL CHECK (result IN ('valid', 'invalid')),
   checked_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- อัพเกรดตารางที่เคยสร้างด้วย schema เก่า (ยังไม่มีคอลัมน์ patient_name / appointment_id)
-ALTER TABLE public.scan_history ADD COLUMN IF NOT EXISTS patient_name TEXT;
-ALTER TABLE public.scan_history ADD COLUMN IF NOT EXISTS appointment_id TEXT;
+-- 2. เผื่อกรณีตารางเดิมเคยถูกสร้างไว้ก่อนหน้านี้แล้วขาดคอลัมน์ (รวบคำสั่งเดียว)
+ALTER TABLE public.scan_history 
+  ADD COLUMN IF NOT EXISTS patient_name TEXT,
+  ADD COLUMN IF NOT EXISTS appointment_id BIGINT;
 
--- index สำหรับหน้าประวัติของแต่ละ รปภ. (เรียงตามเวลาล่าสุด)
-CREATE INDEX IF NOT EXISTS idx_scan_history_checked_by
-  ON public.scan_history (checked_by, created_at DESC);
+-- 3. สารบัญค้นหาสำหรับหน้าประวัติของ รปภ. แต่ละคน
+CREATE INDEX IF NOT EXISTS idx_scan_history_checked_by 
+ON public.scan_history (checked_by, created_at DESC);
 
--- RLS + policy (ปลอดภัยและใช้งานผ่าน service key ของแอปได้)
+-- 4. สารบัญค้นหาตามเวลานัดหมาย (เผื่อกดดูประวัติย้อนหลังจากเลขคิว)
+CREATE INDEX IF NOT EXISTS idx_scan_history_appointment_id 
+ON public.scan_history (appointment_id);
+
+-- 5. ระบบความปลอดภัย Row Level Security (RLS)
 ALTER TABLE public.scan_history ENABLE ROW LEVEL SECURITY;
 
+-- ล้าง Policy เก่าก่อนสร้างใหม่
 DROP POLICY IF EXISTS scan_history_select ON public.scan_history;
-CREATE POLICY scan_history_select ON public.scan_history FOR SELECT USING (true);
-
 DROP POLICY IF EXISTS scan_history_insert ON public.scan_history;
-CREATE POLICY scan_history_insert ON public.scan_history FOR INSERT WITH CHECK (true);
 
--- ถ้าต้องการให้ setup_access.py รู้จักตารางนี้ด้วย (เมื่อรันครั้งถัดไป)
--- ให้เพิ่ม BLOCK ต่อไปนี้ลงใน PLANS ของ scripts/setup_access.py:
---   "scan_history": [
---       ("scan_history_select", "SELECT", "true", None),
---       ("scan_history_insert", "INSERT", None, "true"),
---   ],
+-- แนะนำ: ถ้าเรียกผ่าน Nuxt Server API โดยใช้ Service Role Key จะข้าม RLS ได้อยู่แล้ว
+-- แต่ถ้ายิงตรงจาก Frontend ควรจำกัดให้เฉพาะคนที่ล็อกอินแล้วเท่านั้นที่อ่าน/เขียนได้
+CREATE POLICY scan_history_select 
+ON public.scan_history 
+FOR SELECT 
+TO authenticated 
+USING (true);
+
+CREATE POLICY scan_history_insert 
+ON public.scan_history 
+FOR INSERT 
+TO authenticated 
+WITH CHECK (true);
