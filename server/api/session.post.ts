@@ -63,8 +63,12 @@ export default defineEventHandler(async (event) => {
       }
 
       // ตรวจเบอร์โทร: ชื่อและเบอร์ต้องตรงกับข้อมูลในระบบ (ถ้าในระบบมีเบอร์)
-      const storedPhone = typeof matched.phone_number === 'string' ? matched.phone_number.replace(/[\s-]/g, '') : ''
-      const inputPhone = phoneNumber.replace(/[\s-]/g, '')
+      const storedPhone = typeof (matched as any)?.phone_number === 'string'
+        ? (matched as any).phone_number.replace(/[\s-]/g, '')
+        : ''
+
+      const inputPhone = (phoneNumber || '').replace(/[\s-]/g, '') // ดึงตัวแปรนี้กลับมา
+
       if (!storedPhone || storedPhone !== inputPhone) {
         throw createError({
           statusCode: 401,
@@ -72,7 +76,6 @@ export default defineEventHandler(async (event) => {
         })
       }
     }
-
     // 3. สร้าง session และเซ็นต์ลง cookie
     const session: AccessSession = {
       full_name: fullName,

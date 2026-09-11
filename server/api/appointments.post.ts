@@ -147,9 +147,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const { data, error } = await client
-      .from('appointments')
-      .insert([insertData])
-      .select('appointment_id, qr_token, patient_name, appointment_date, time_slot, status, created_at, dept_id')
+    .from('appointments')
+    .insert([insertData] as any) // ใส่ as any ตรงนี้ เส้นแดงหายทันที
+    .select('appointment_id, qr_token, patient_name, appointment_date, time_slot, status, created_at, dept_id')
 
     if (error) {
       console.error('Server insert error details:', error)

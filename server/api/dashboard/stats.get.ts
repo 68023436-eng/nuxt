@@ -63,7 +63,7 @@ export default defineEventHandler(async (event) => {
 
     // จำนวนผู้ใช้บริการไม่ซ้ำ (ใช้คู่ชื่อ+เบอร์เป็นตัวระบุ)
     const visitors = new Set<string>()
-    for (const r of rows) {
+    for (const r of (rows as any)) {
       const key = `${r.patient_name || ''}|${r.phone_number || ''}`.trim()
       if (key) visitors.add(key)
     }
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
 
     // แผนกที่มาใช้บริการบ่อย (นับ dept_id / ชื่อแผนก)
     const deptMap = new Map<string, { dept_id: string | number | null; name: string; count: number }>()
-    for (const r of rows) {
+    for (const r of (rows as any)) {
       const name = r.department?.dept_name_th || r.department?.[0]?.dept_name_th || 'ไม่ระบุแผนก'
       const deptId = r.dept_id
       const mapKey = name

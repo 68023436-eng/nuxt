@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
         phone_number: phoneNumber || null,
         email,
         is_active: isActive,
-      })
+      } as any)
       .select('user_id, full_name, role, phone_number, email, is_active')
       .single()
 
