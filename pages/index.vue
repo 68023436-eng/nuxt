@@ -8,8 +8,8 @@
         <div class="tw-w-20 tw-h-20 tw-bg-red-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
           <span class="tw-text-4xl">🔒</span>
         </div>
-        <h2 class="tw-text-xl tw-font-bold tw-text-gray-800">ไม่มีสิทธิ์เข้าถึง Dashboard</h2>
-        <p class="tw-text-sm tw-text-slate-500 tw-mt-2">สถิติรวมเปิดให้เฉพาะ Admin และเจ้าหน้าที่คลินิกเท่านั้น</p>
+        <h2 class="tw-text-xl tw-font-bold tw-text-gray-800">{{ $t('index.noAccessTitle') }}</h2>
+        <p class="tw-text-sm tw-text-slate-500 tw-mt-2">{{ $t('index.noAccessDesc') }}</p>
       </div>
     </div>
 
@@ -17,13 +17,13 @@
     <div v-else class="tw-flex-1 tw-p-4 sm:tw-p-8">
       <!-- Header Banner -->
       <div class=" tw-bg-blue-100 tw-border-l-8 tw-border-l-blue-500 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-6">
-        <h1 class="tw-text-2xl tw-font-bold tw-text-black">แดชบอร์ดสรุปการใช้บริการ</h1>
-        <p class="tw-text-sm tw-text-slate-500 tw-mt-1 tw-font-mono">Smart QR Parking — Dashboard</p>
+        <h1 class="tw-text-2xl tw-font-bold tw-text-black">{{ $t('index.title') }}</h1>
+        <p class="tw-text-sm tw-text-slate-500 tw-mt-1 tw-font-mono">{{ $t('index.subtitle') }}</p>
       </div>
 
       <!-- Month Selector -->
       <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3 tw-mb-6">
-        <label class="tw-text-sm tw-font-medium tw-text-gray-700" for="dash-month">เลือกเดือน:</label>
+        <label class="tw-text-sm tw-font-medium tw-text-gray-700" for="dash-month">{{ $t('index.selectMonth') }}</label>
         <input
           id="dash-month"
           v-model="month"
@@ -38,14 +38,14 @@
           :disabled="loading"
           class="tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-text-sm tw-font-semibold tw-py-2 tw-px-5 tw-rounded-xl tw-shadow-sm tw-transition-colors"
         >
-          {{ loading ? 'กำลังโหลด...' : 'ดูข้อมูล' }}
+          {{ loading ? $t('common.loading') : $t('index.viewData') }}
         </button>
       </div>
 
       <!-- Loading -->
       <div v-if="loading" class="tw-text-center tw-py-16 tw-text-slate-500">
         <div class="tw-inline-block tw-w-8 tw-h-8 tw-border-4 tw-border-emerald-300 tw-border-t-transparent tw-rounded-full tw-animate-spin tw-mb-3"></div>
-        <p>กำลังโหลดข้อมูล...</p>
+        <p>{{ $t('common.loadingData') }}</p>
       </div>
 
       <!-- Error -->
@@ -56,42 +56,42 @@
         <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-3 tw-gap-5 tw-mb-8">
           <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-200 tw-border-l-amber-400 tw-border-l-8 tw-p-6">
             <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
-              <span class="tw-text-xl">ยอดรวมทั้งหมด</span>
+              <span class="tw-text-xl">{{ $t('index.totalVisits') }}</span>
               <span class="tw-text-xs tw-text-slate-500 tw-bg-amber-100 tw-border-2 tw-border-amber-200 tw-px-2 tw-py-1 tw-rounded-full tw-font-mono">{{ stats.month }}</span>
             </div>
             <p class="tw-text-3xl tw-font-bold tw-text-gray-800">{{ stats.total_visits.toLocaleString() }}</p>
-            <p class="tw-text-sm tw-text-slate-500 tw-mt-1">ครั้ง</p>
+            <p class="tw-text-sm tw-text-slate-500 tw-mt-1">{{ $t('index.times') }}</p>
           </div>
 
           <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-200 tw-border-l-8 tw-border-l-purple-400 tw-p-6">
             <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
-              <span class="tw-text-xl">ยอดผู้เข้ารับบริการ</span>
-              <span class="tw-text-xs tw-text-slate-500 tw-bg-purple-100 tw-px-2 tw-py-1 tw-rounded-full tw-border-2 tw-border-purple-200 tw-font-mono">เฉพาะบุคคล</span>
+              <span class="tw-text-xl">{{ $t('index.totalVisitors') }}</span>
+              <span class="tw-text-xs tw-text-slate-500 tw-bg-purple-100 tw-px-2 tw-py-1 tw-rounded-full tw-border-2 tw-border-purple-200 tw-font-mono">{{ $t('index.uniquePersons') }}</span>
             </div>
             <p class="tw-text-3xl tw-font-bold tw-text-gray-800">{{ stats.total_visitors.toLocaleString() }}</p>
-            <p class="tw-text-sm tw-text-slate-500 tw-mt-1">คน</p>
+            <p class="tw-text-sm tw-text-slate-500 tw-mt-1">{{ $t('index.persons') }}</p>
           </div>
 
           <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-200 tw-border-l-8 tw-border-l-emerald-400 tw-p-6">
             <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
-              <span class="tw-text-xl">จำนวนเจ้าหน้าที่</span>
-              <span class="tw-text-xs tw-text-slate-500 tw-bg-emerald-100 tw-px-2 tw-py-1 tw-rounded-full tw-border-2 tw-border-emerald-200 tw-font-mono">ทั้งหมด</span>
+              <span class="tw-text-xl">{{ $t('index.staffCount') }}</span>
+              <span class="tw-text-xs tw-text-slate-500 tw-bg-emerald-100 tw-px-2 tw-py-1 tw-rounded-full tw-border-2 tw-border-emerald-200 tw-font-mono">{{ $t('index.staffCountAll') }}</span>
             </div>
             <p class="tw-text-3xl tw-font-bold tw-text-gray-800">{{ stats.staff_count.toLocaleString() }}</p>
-            <p class="tw-text-sm tw-text-slate-500 tw-mt-1">จำนวนเจ้าหน้าที่</p>
+            <p class="tw-text-sm tw-text-slate-500 tw-mt-1">{{ $t('index.staffCount') }}</p>
           </div>
         </div>
 
         <!-- ข้อมูลนี้ไม่ขึ้นกับเดือน (เจ้าหน้าที่ทั้งหมด) -->
-        <p class="tw-text-xs tw-text-slate-400 tw-mb-4">* จำนวนเจ้าหน้าที่ = ยอดรวมปัจจุบันทั้งหมดอิสระจากเดือนที่เลือก</p>
+        <p class="tw-text-xs tw-text-slate-400 tw-mb-4">{{ $t('index.staffCountFootnote') }}</p>
 
         <!-- Top Departments -->
         <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-200 tw-p-6">
-          <h2 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-1">แผนกที่มาใช้บริการบ่อย</h2>
-          <p class="tw-text-sm tw-text-slate-500 tw-mb-5">เดือน {{ stats.month }} — เรียงตามจำนวนการใช้บริการ</p>
+          <h2 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-1">{{ $t('index.topDepartments') }}</h2>
+          <p class="tw-text-sm tw-text-slate-500 tw-mb-5">{{ $t('index.topDepartmentsSub', { month: stats.month }) }}</p>
 
           <div v-if="stats.top_departments.length === 0" class="tw-text-sm tw-text-slate-400 tw-py-6 tw-text-center">
-            ยังไม่มีข้อมูลในเดือนนี้
+            {{ $t('index.noData') }}
           </div>
 
           <template v-else>
@@ -113,7 +113,7 @@
                   ></div>
                 </div>
               </div>
-              <span class="tw-text-sm tw-font-bold tw-text-gray-700 tw-whitespace-nowrap">{{ dept.count }} ครั้ง</span>
+              <span class="tw-text-sm tw-font-bold tw-text-gray-700 tw-whitespace-nowrap">{{ $t('index.timesCount', { count: dept.count }) }}</span>
             </div>
           </template>
         </div>
@@ -157,7 +157,7 @@ const loadStats = async () => {
     stats.value = res
   } catch (err) {
     stats.value = null
-    errorMsg.value = err?.data?.statusMessage || err?.message || 'ไม่สามารถโหลดข้อมูลแดชบอร์ดได้'
+    errorMsg.value = err?.data?.statusMessage || err?.message || $t('index.fetchError')
   } finally {
     loading.value = false
   }

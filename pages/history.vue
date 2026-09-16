@@ -11,8 +11,8 @@
         <!-- Header Banner -->
         <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-sky-100 tw-border-l-8 tw-border-l-sky-600 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
           <div>
-            <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">ประวัติการตรวจสอบ</h1>
-            <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Security Check History</p>
+            <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">{{ $t('history.guardTitle') }}</h1>
+            <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">{{ $t('history.guardSubtitle') }}</p>
           </div>
           <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
             <button
@@ -20,7 +20,7 @@
               :disabled="loading"
               class="tw-bg-white hover:tw-bg-sky-50 disabled:tw-bg-gray-100 tw-text-sky-700 tw-border tw-border-sky-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
             >
-              <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชประวัติ' }}</span>
+              <span>{{ loading ? $t('common.loading') : $t('common.refreshHistory') }}</span>
             </button>
           </div>
         </div>
@@ -28,19 +28,19 @@
         <!-- Loading -->
         <div v-if="loading" class="tw-text-center tw-py-12">
           <div class="tw-inline-block tw-w-8 tw-h-8 tw-border-4 tw-border-sky-400 tw-border-t-transparent tw-rounded-full tw-animate-spin"></div>
-          <p class="tw-text-gray-500 tw-text-lg tw-mt-3">กำลังโหลดประวัติ...</p>
+          <p class="tw-text-gray-500 tw-text-lg tw-mt-3">{{ $t('common.loadingHistory') }}</p>
         </div>
 
         <!-- Error -->
         <div v-else-if="errorMsg" class="tw-bg-red-50 tw-border tw-border-red-200 tw-p-4 tw-rounded-xl tw-text-red-600">
-          <p>เกิดข้อผิดพลาด: {{ errorMsg }}</p>
-          <button @click="fetchScanHistory" class="tw-mt-2 tw-text-sm tw-underline hover:tw-text-red-800">ลองอีกครั้ง</button>
+          <p>{{ $t('common.error') }}: {{ errorMsg }}</p>
+          <button @click="fetchScanHistory" class="tw-mt-2 tw-text-sm tw-underline hover:tw-text-red-800">{{ $t('common.retry') }}</button>
         </div>
 
         <!-- Empty -->
         <div v-else-if="scanHistory.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-8 sm:tw-p-12 tw-rounded-2xl tw-text-center">
-          <p class="tw-text-gray-400 tw-text-lg">ยังไม่มีประวัติการตรวจสอบ</p>
-          <p class="tw-text-gray-400 tw-text-sm tw-mt-1">รายการที่คุณเคยสแกน QR หรือค้นหาเบอร์โทร จะบันทึกไว้ที่นี่</p>
+          <p class="tw-text-gray-400 tw-text-lg">{{ $t('history.guardEmpty') }}</p>
+          <p class="tw-text-gray-400 tw-text-sm tw-mt-1">{{ $t('history.guardEmptyHint') }}</p>
         </div>
 
         <!-- Guard Scan History Table -->
@@ -49,11 +49,11 @@
             <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[720px]">
               <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
                 <tr>
-                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ลำดับ</th>
-                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ผู้ถูกตรวจสอบ</th>
-                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วันที่ / เวลา</th>
-                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">วิธีตรวจสอบ</th>
-                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">ผลการตรวจสอบ</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.tableNo') }}</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.guardTableSubject') }}</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.guardTableDateTime') }}</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.guardTableMethod') }}</th>
+                  <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.guardTableResult') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -64,7 +64,7 @@
                 >
                   <td class="tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
                   <td class="tw-px-5 tw-py-4">
-                    <div class="tw-text-gray-800 tw-font-medium">{{ item.patient_name || 'ไม่ทราบชื่อ' }}</div>
+                    <div class="tw-text-gray-800 tw-font-medium">{{ item.patient_name || $t('history.unknownName') }}</div>
                     <div v-if="item.phone_number" class="tw-text-xs tw-text-slate-500 tw-mt-0.5 tw-font-mono">
                       {{ item.phone_number }}
                     </div>
@@ -72,7 +72,7 @@
                   <td class="tw-px-5 tw-py-4 tw-text-gray-800">{{ formatDateTime(item.created_at) }}</td>
                   <td class="tw-px-5 tw-py-4">
                     <span class="tw-inline-flex tw-items-center tw-gap-1.5 tw-text-gray-700">
-                      {{ item.method === 'qr' ? '📷 สแกน QR Code' : '📞 ค้นหาเบอร์โทร' }}
+                      {{ item.method === 'qr' ? $t('history.guardMethodQr') : $t('history.guardMethodPhone') }}
                     </span>
                   </td>
                   <td class="tw-px-5 tw-py-4">
@@ -82,7 +82,7 @@
                         : 'tw-bg-red-100 tw-text-red-700'"
                       class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium"
                     >
-                      {{ item.result === 'valid' ? '✓ มีสิทธิ์' : '✕ ไม่มีสิทธิ์' }}
+                      {{ item.result === 'valid' ? $t('history.guardResultValid') : $t('history.guardResultInvalid') }}
                     </span>
                   </td>
                 </tr>
@@ -90,7 +90,7 @@
             </table>
           </div>
           <div class="tw-px-6 tw-py-3 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-sm tw-text-gray-500">
-            ทั้งหมด {{ scanHistory.length }} รายการ
+            {{ $t('common.totalItems', { count: scanHistory.length }) }}
           </div>
         </div>
       </div>
@@ -100,8 +100,8 @@
         <!-- Header Banner พร้อมปุ่มรีเฟรช -->
         <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-cyan-100 tw-border-l-8 tw-border-l-cyan-600 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
           <div>
-            <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">ประวัติการนัดหมายของฉัน</h1>
-            <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">My Appointment History</p>
+            <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">{{ $t('history.myTitle') }}</h1>
+            <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">{{ $t('history.mySubtitle') }}</p>
           </div>
           <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
             <button
@@ -109,7 +109,7 @@
               :disabled="loading"
               class="tw-bg-white hover:tw-bg-cyan-50 disabled:tw-bg-gray-100 tw-text-cyan-700 tw-border tw-border-cyan-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
             >
-              <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชประวัติ' }}</span>
+              <span>{{ loading ? $t('common.loading') : $t('common.refreshHistory') }}</span>
             </button>
           </div>
         </div>
@@ -117,19 +117,19 @@
         <!-- Loading State -->
         <div v-if="loading" class="tw-text-center tw-py-12">
           <div class="tw-inline-block tw-w-8 tw-h-8 tw-border-4 tw-border-cyan-400 tw-border-t-transparent tw-rounded-full tw-animate-spin"></div>
-          <p class="tw-text-gray-500 tw-text-lg tw-mt-3">กำลังโหลดประวัติ...</p>
+          <p class="tw-text-gray-500 tw-text-lg tw-mt-3">{{ $t('common.loadingHistory') }}</p>
         </div>
 
         <!-- Error State -->
         <div v-else-if="errorMsg" class="tw-bg-red-50 tw-border tw-border-red-200 tw-p-4 tw-rounded-xl tw-text-red-600">
-          <p>เกิดข้อผิดพลาด: {{ errorMsg }}</p>
-          <button @click="fetchHistory" class="tw-mt-2 tw-text-sm tw-underline hover:tw-text-red-800">ลองอีกครั้ง</button>
+          <p>{{ $t('common.error') }}: {{ errorMsg }}</p>
+          <button @click="fetchHistory" class="tw-mt-2 tw-text-sm tw-underline hover:tw-text-red-800">{{ $t('common.retry') }}</button>
         </div>
 
         <!-- Empty State -->
         <div v-else-if="upcomingAppointments.length === 0 && pastAppointments.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-8 sm:tw-p-12 tw-rounded-2xl tw-text-center">
-          <p class="tw-text-gray-400 tw-text-lg">ยังไม่มีประวัติการนัดหมาย</p>
-          <p class="tw-text-gray-400 tw-text-sm tw-mt-1">นัดหมายของคุณทั้งหมดจะแสดงอยู่ที่นี่</p>
+          <p class="tw-text-gray-400 tw-text-lg">{{ $t('history.myEmpty') }}</p>
+          <p class="tw-text-gray-400 tw-text-sm tw-mt-1">{{ $t('history.myEmptyHint') }}</p>
         </div>
 
         <template v-else>
@@ -137,22 +137,22 @@
           <section v-if="upcomingAppointments.length > 0" class="tw-mb-8">
             <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
               <h2 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-flex tw-items-center tw-gap-2">
-                <span>🗓️</span> นัดที่จะมาถึง
+                {{ $t('history.upcoming') }}
               </h2>
-              <span class="tw-text-sm tw-text-gray-500">ทั้งหมด {{ upcomingAppointments.length }} รายการ</span>
+              <span class="tw-text-sm tw-text-gray-500">{{ $t('common.totalItems', { count: upcomingAppointments.length }) }}</span>
             </div>
             <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-100 tw-overflow-hidden">
               <div class="tw-overflow-x-auto">
                 <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[920px]">
                   <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
                     <tr>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">ลำดับ</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">ชื่อผู้ป่วย / เบอร์โทร</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[140px]">ทะเบียนรถ</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">แผนกตรวจ</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">วันและเวลานัดหมาย</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[150px] tw-text-center">จัดการ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">{{ $t('history.tableNo') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">{{ $t('history.tablePatient') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[140px]">{{ $t('history.tablePlate') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">{{ $t('history.tableDept') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">{{ $t('history.tableDateTime') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">{{ $t('history.tableStatus') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[150px] tw-text-center">{{ $t('history.tableActions') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -188,7 +188,7 @@
                           @click="openDetail(item)"
                           class="tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
                         >
-                          ดูเพิ่มเติม
+                          {{ $t('common.viewDetails') }}
                         </button>
                       </td>
                     </tr>
@@ -202,22 +202,22 @@
           <section v-if="pastAppointments.length > 0">
             <div class="tw-flex tw-items-center tw-justify-between tw-mb-3">
               <h2 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-flex tw-items-center tw-gap-2">
-                <span>📜</span> ประวัติ
+                {{ $t('history.pastHistory') }}
               </h2>
-              <span class="tw-text-sm tw-text-gray-500">ทั้งหมด {{ pastAppointments.length }} รายการ</span>
+              <span class="tw-text-sm tw-text-gray-500">{{ $t('common.totalItems', { count: pastAppointments.length }) }}</span>
             </div>
             <div class="tw-bg-white tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-100 tw-overflow-hidden">
               <div class="tw-overflow-x-auto">
                 <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[920px]">
                   <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
                     <tr>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">ลำดับ</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">ชื่อผู้ป่วย / เบอร์โทร</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[140px]">ทะเบียนรถ</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">แผนกตรวจ</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">วันและเวลานัดหมาย</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
-                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[150px] tw-text-center">จัดการ</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">{{ $t('history.tableNo') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">{{ $t('history.tablePatient') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[140px]">{{ $t('history.tablePlate') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">{{ $t('history.tableDept') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">{{ $t('history.tableDateTime') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">{{ $t('history.tableStatus') }}</th>
+                      <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[150px] tw-text-center">{{ $t('history.tableActions') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -253,7 +253,7 @@
                           @click="openDetail(item)"
                           class="tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
                         >
-                          ดูเพิ่มเติม
+                          {{ $t('common.viewDetails') }}
                         </button>
                       </td>
                     </tr>
@@ -270,8 +270,8 @@
       <!-- Header Banner พร้อมปุ่มรีเฟรช -->
       <div class="tw-flex tw-flex-col md:tw-flex-row tw-gap-4 md:tw-items-center md:tw-justify-between tw-bg-purple-100 tw-border-l-8 tw-border-l-purple-600 tw-p-5 tw-rounded-xl tw-shadow-sm tw-mb-8">
         <div>
-          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">การเก็บประวัตินัดหมาย</h1>
-          <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">Appointments History</p>
+          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">{{ $t('history.staffTitle') }}</h1>
+          <p class="tw-text-sm tw-text-slate-600 tw-font-mono tw-mt-1">{{ $t('history.staffSubtitle') }}</p>
         </div>
 
         <!-- ปุ่มรีเฟรชข้อมูล -->
@@ -282,14 +282,14 @@
             :disabled="purging"
             class="tw-bg-white hover:tw-bg-red-50 disabled:tw-bg-gray-100 tw-text-red-600 tw-border tw-border-red-200 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
           >
-            <span>{{ purging ? 'กำลังล้าง...' : 'ล้างข้อมูลที่หมดอายุ' }}</span>
+            <span>{{ purging ? $t('history.purging') : $t('history.purgeExpired') }}</span>
           </button>
           <button 
             @click="fetchHistory" 
             :disabled="loading"
             class="tw-bg-white hover:tw-bg-purple-50 disabled:tw-bg-gray-100 tw-text-purple-800 tw-border tw-border-purple-300 tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-shadow-sm tw-flex tw-items-center tw-gap-2 tw-transition-colors"
           >
-            <span>{{ loading ? 'กำลังโหลด...' : 'รีเฟรชประวัติ' }}</span>
+            <span>{{ loading ? $t('common.loading') : $t('common.refreshHistory') }}</span>
           </button>
         </div>
       </div>
@@ -298,8 +298,7 @@
       <div class="tw-mb-6 tw-bg-indigo-50 tw-border tw-border-indigo-200 tw-p-4 tw-rounded-xl tw-text-indigo-800 tw-text-sm tw-flex tw-items-start tw-gap-3">
         <div>
           <p class="tw-text-indigo-600 tw-mt-0.5">
-            รายการที่ถูกลบจะอยู่ในประวัติเป็นเวลา {{ RETENTION_DAYS }} วัน (1 เดือน) 
-            ซึ่งสามารถกู้คืนได้ตลอดช่วงเวลานี้ หากครบ {{ RETENTION_DAYS }} วัน ข้อมูลจะถูกลบออกจากระบบอัตโนมัติโดยไม่สามารถกู้คืนได้อีก
+            {{ $t('history.purgeNoticeBanner', { days: RETENTION_DAYS }) }}
           </p>
         </div>
       </div>
@@ -308,8 +307,8 @@
       <div v-if="canRestore && historyAppointments.length > 0" class="tw-mb-6 tw-bg-white tw-border tw-border-slate-200 tw-rounded-xl tw-p-4 tw-shadow-sm">
         <div class="tw-flex tw-flex-wrap tw-items-center tw-gap-3">
           <div class="tw-w-full sm:tw-w-auto tw-text-sm tw-text-gray-700">
-            <span class="tw-font-semibold">กู้คืนข้อมูล</span>
-            <span class="tw-text-gray-400 tw-ml-1">เลือกในตารางเพื่อกู้คืนพร้อมกัน หรือกู้คืนทั้งหมด</span>
+            <span class="tw-font-semibold">{{ $t('history.restoreTitle') }}</span>
+            <span class="tw-text-gray-400 tw-ml-1">{{ $t('history.restoreHint') }}</span>
           </div>
           <div class="tw-flex-1 tw-hidden sm:tw-block"></div>
           <button
@@ -317,21 +316,21 @@
             @click="askBatchRestore(selectedIds, 'selected')"
             class="tw-w-full sm:tw-w-auto tw-bg-indigo-600 hover:tw-bg-indigo-700 disabled:tw-bg-gray-300 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-transition-colors"
           >
-            กู้คืนที่เลือก (<span class="tw-font-bold">{{ selectedIds.length }}</span>)
+            {{ $t('history.restoreSelected', { count: selectedIds.length }) }}
           </button>
           <button
             :disabled="historyAppointments.length === 0 || restoringAll"
             @click="askBatchRestore(historyAppointments.map(a => a.appointment_id), 'all')"
             class="tw-w-full sm:tw-w-auto tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-300 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-font-medium tw-transition-colors"
           >
-            กู้คืนทั้งหมด (<span class="tw-font-bold">{{ historyAppointments.length }}</span>)
+            {{ $t('history.restoreAll', { count: historyAppointments.length }) }}
           </button>
           <button
             v-if="selectedIds.length > 0"
             @click="selectedIds = []"
             class="tw-text-sm tw-text-gray-500 hover:tw-text-gray-700 tw-underline tw-whitespace-nowrap"
           >
-            ล้างการเลือก
+            {{ $t('history.clearSelection') }}
           </button>
         </div>
       </div>
@@ -348,19 +347,19 @@
       <!-- Loading State -->
       <div v-if="loading" class="tw-text-center tw-py-12">
         <div class="tw-inline-block tw-w-8 tw-h-8 tw-border-4 tw-border-purple-400 tw-border-t-transparent tw-rounded-full tw-animate-spin"></div>
-        <p class="tw-text-gray-500 tw-text-lg tw-mt-3">กำลังโหลดประวัติ...</p>
+        <p class="tw-text-gray-500 tw-text-lg tw-mt-3">{{ $t('common.loadingHistory') }}</p>
       </div>
 
       <!-- Error State -->
       <div v-else-if="errorMsg" class="tw-bg-red-50 tw-border tw-border-red-200 tw-p-4 tw-rounded-xl tw-text-red-600">
-        <p>เกิดข้อผิดพลาด: {{ errorMsg }}</p>
-        <button @click="fetchHistory" class="tw-mt-2 tw-text-sm tw-underline hover:tw-text-red-800">ลองอีกครั้ง</button>
+        <p>{{ $t('common.error') }}: {{ errorMsg }}</p>
+        <button @click="fetchHistory" class="tw-mt-2 tw-text-sm tw-underline hover:tw-text-red-800">{{ $t('common.retry') }}</button>
       </div>
 
       <!-- Empty State -->
       <div v-else-if="historyAppointments.length === 0" class="tw-bg-white tw-border tw-border-slate-200 tw-p-8 sm:tw-p-12 tw-rounded-2xl tw-text-center">
-        <p class="tw-text-gray-400 tw-text-lg">ยังไม่มีรายการประวัติที่ถูกลบหรือยกเลิก</p>
-        <p class="tw-text-gray-400 tw-text-sm tw-mt-1">รายการนัดหมายที่ถูกลบออกจากหน้ารายการนัดหมายจะมาแสดงที่นี่</p>
+        <p class="tw-text-gray-400 tw-text-lg">{{ $t('history.emptyDeleted') }}</p>
+        <p class="tw-text-gray-400 tw-text-sm tw-mt-1">{{ $t('history.emptyDeletedHint') }}</p>
       </div>
 
       <!-- Data Table -->
@@ -377,14 +376,14 @@
                   class="tw-w-4 tw-h-4 tw-accent-indigo-600 tw-cursor-pointer"
                 />
               </th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">ลำดับ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[220px]">ชื่อผู้ป่วย / เบอร์โทร</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[130px]">ทะเบียนรถ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">แผนกตรวจ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">วันและเวลานัดหมาย</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">สถานะ</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[210px]">ลบถาวรเมื่อครบ {{ RETENTION_DAYS }} วัน</th>
-              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px] tw-text-center">จัดการ</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">{{ $t('history.tableNo') }}</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[220px]">{{ $t('history.tablePatient') }}</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[130px]">{{ $t('history.tablePlate') }}</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[200px]">{{ $t('history.tableDept') }}</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px]">{{ $t('history.tableDateTime') }}</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">{{ $t('history.tableStatus') }}</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[210px]">{{ $t('history.purgeSoon', { days: RETENTION_DAYS }) }}</th>
+              <th class="tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[190px] tw-text-center">{{ $t('history.tableActions') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -428,7 +427,7 @@
               </td>
               <td class="tw-px-5 tw-py-4">
                 <template v-if="item.deleted_at">
-                  <div class="tw-text-xs tw-text-gray-500 tw-whitespace-nowrap">ลบเมื่อ {{ formatDateTime(item.deleted_at) }}</div>
+                  <div class="tw-text-xs tw-text-gray-500 tw-whitespace-nowrap">{{ $t('history.deletedAt', { date: formatDateTime(item.deleted_at) }) }}</div>
                   <div class="tw-text-xs tw-font-semibold tw-mt-0.5 tw-whitespace-nowrap" :class="daysUntilPurge(item.deleted_at, item.days_until_purge) !== null && daysUntilPurge(item.deleted_at, item.days_until_purge) <= 7 ? 'tw-text-red-600' : 'tw-text-indigo-600'">
                     {{ purgeNotice(item.deleted_at, item.days_until_purge) }}
                   </div>
@@ -444,7 +443,7 @@
                     @click="openDetail(item)"
                     class="tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
                   >
-                    ดูเพิ่มเติม
+                    {{ $t('common.viewDetails') }}
                   </button>
                   <!-- ปุ่มกู้กลับ -->
                   <button 
@@ -453,7 +452,7 @@
                     :disabled="restoringId === item.appointment_id"
                     class="tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-300 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors tw-shadow-sm tw-flex tw-items-center tw-gap-1"
                   >
-                    <span>{{ restoringId === item.appointment_id ? 'กำลังกู้คืน...' : ' กู้กลับ' }}</span>
+                    <span>{{ restoringId === item.appointment_id ? $t('history.restoring') : $t('history.restoreBtn') }}</span>
                   </button>
                 </div>
               </td>
@@ -464,7 +463,7 @@
 
         <!-- Summary -->
         <div class="tw-px-6 tw-py-3 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-sm tw-text-gray-500">
-          ประวัติทั้งหมด {{ historyAppointments.length }} รายการ
+          {{ $t('history.totalHistory', { count: historyAppointments.length }) }}
         </div>
       </div>
       </template>
@@ -484,7 +483,7 @@
             <!-- Modal Header -->
             <div class="tw-bg-gradient-to-r tw-from-purple-500 tw-to-indigo-600 tw-px-6 tw-py-4">
               <div class="tw-flex tw-items-center tw-justify-between">
-                <h2 class="tw-text-lg tw-font-bold tw-text-white">รายละเอียดประวัตินัดหมาย</h2>
+                <h2 class="tw-text-lg tw-font-bold tw-text-white">{{ $t('history.detailTitle') }}</h2>
                 <button 
                   @click="closeModal"
                   class="tw-text-white/80 hover:tw-text-white tw-transition-colors tw-text-2xl tw-leading-none tw-font-light"
@@ -502,7 +501,7 @@
                   <span class="tw-text-slate-500 tw-text-sm">#</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">รหัสนัดหมาย</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.appointmentId') }}</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.appointment_id }}</p>
                 </div>
               </div>
@@ -513,7 +512,7 @@
                   <span class="tw-text-blue-500 tw-text-sm">👤</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">ชื่อผู้ป่วย</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.patientName') }}</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.patient_name }}</p>
                 </div>
               </div>
@@ -524,7 +523,7 @@
                   <span class="tw-text-emerald-500 tw-text-sm">📞</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">เบอร์โทรศัพท์</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.phoneNumber') }}</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.phone_number || '-' }}</p>
                 </div>
               </div>
@@ -535,7 +534,7 @@
                   <span class="tw-text-cyan-500 tw-text-sm">🚗</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">ทะเบียนรถยนต์</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.licensePlate') }}</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.license_plate }}</p>
                 </div>
               </div>
@@ -546,7 +545,7 @@
                   <span class="tw-text-teal-500 tw-text-sm">🏥</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">แผนกตรวจ</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.department') }}</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.department_name || selectedAppointment.dept_id }}</p>
                 </div>
               </div>
@@ -557,7 +556,7 @@
                   <span class="tw-text-green-500 tw-text-sm">📅</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">วันนัดหมาย</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.appointmentDate') }}</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ formatDate(selectedAppointment.appointment_date) }}</p>
                 </div>
               </div>
@@ -568,7 +567,7 @@
                   <span class="tw-text-purple-500 tw-text-sm">🕐</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">ช่วงเวลา</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.timeSlot') }}</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ selectedAppointment.time_slot }}</p>
                 </div>
               </div>
@@ -585,7 +584,7 @@
                   <span class="tw-text-amber-500 tw-text-sm">📋</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">สถานะ</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.status') }}</p>
                   <span :class="statusClass(selectedAppointment.status)" class="tw-inline-block tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-medium tw-mt-0.5">
                     {{ statusLabel(selectedAppointment.status) }}
                   </span>
@@ -598,9 +597,9 @@
                   <span class="tw-text-rose-500 tw-text-sm">🗑️</span>
                 </div>
                 <div>
-                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">การลบถาวร</p>
+                  <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.permanentDelete') }}</p>
                   <p class="tw-text-gray-800 tw-font-semibold">{{ purgeNotice(selectedAppointment.deleted_at, selectedAppointment.days_until_purge) }}</p>
-                  <p class="tw-text-xs tw-text-gray-500 tw-mt-0.5">ถูกลบเมื่อ {{ formatDateTime(selectedAppointment.deleted_at) }}</p>
+                  <p class="tw-text-xs tw-text-gray-500 tw-mt-0.5">{{ $t('history.deletedOn', { date: formatDateTime(selectedAppointment.deleted_at) }) }}</p>
                 </div>
               </div>
             </div>
@@ -611,7 +610,7 @@
                 @click="closeModal"
                 class="tw-bg-slate-200 hover:tw-bg-slate-300 tw-text-gray-700 tw-font-medium tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm tw-transition-colors"
               >
-                ปิด
+                {{ $t('common.close') }}
               </button>
             </div>
           </div>
@@ -630,15 +629,15 @@
 
           <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-md tw-overflow-hidden tw-transform tw-transition-all tw-max-h-[90vh] tw-overflow-y-auto">
             <div class="tw-p-6 tw-text-center">
-              <h3 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">ยืนยันการกู้คืนข้อมูล</h3>
+              <h3 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">{{ $t('history.restoreConfirmTitle') }}</h3>
               <p class="tw-text-sm tw-text-gray-600 tw-mb-4">
-                คุณต้องการกู้คืนรายการนัดหมายของ 
-                <strong class="tw-text-gray-800 tw-font-semibold">{{ itemToRestore?.patient_name }}</strong> 
-                (ID: {{ itemToRestore?.appointment_id }}) กลับไปยังหน้ารายการนัดหมายใช่หรือไม่?
+                {{ $t('history.restoreConfirmText', {
+                  name: itemToRestore?.patient_name,
+                  id: itemToRestore?.appointment_id,
+                }) }}
               </p>
               <p class="tw-text-xs tw-text-purple-700 tw-bg-purple-50 tw-p-3 tw-rounded-xl tw-border tw-border-purple-200">
-                เมื่อกู้คืนแล้ว สถานะรายการจะถูกเปลี่ยนเป็น <strong>"ข้อมูล backup"</strong> และนำกลับไปแสดงในหน้ารายการนัดหมายทันที 
-                พร้อมกับหยุดนับเวลาการลบถาวร (ข้อมูลจะไม่ถูกลบออกโดยอัตโนมัติอีกต่อไป)
+                {{ $t('history.restoreConfirmNote') }}
               </p>
             </div>
 
@@ -649,14 +648,14 @@
                 :disabled="restoringId !== null"
                 class="tw-bg-slate-200 hover:tw-bg-slate-300 disabled:tw-opacity-50 tw-text-gray-700 tw-font-medium tw-py-2 tw-px-4 tw-rounded-lg tw-text-sm tw-transition-colors"
               >
-                ยกเลิก
+                {{ $t('common.cancel') }}
               </button>
               <button 
                 @click="confirmRestoreAppointment"
                 :disabled="restoringId !== null"
                 class="tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-medium tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm tw-transition-colors tw-shadow-sm"
               >
-                {{ restoringId !== null ? 'กำลังกู้คืน...' : 'ยืนยันกู้คืนข้อมูล' }}
+                {{ restoringId !== null ? $t('history.restoring') : $t('history.confirmRestore') }}
               </button>
             </div>
           </div>
@@ -675,15 +674,12 @@
 
           <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-md tw-overflow-hidden tw-transform tw-transition-all tw-max-h-[90vh] tw-overflow-y-auto">
             <div class="tw-p-6 tw-text-center">
-              <h3 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">ยืนยันการกู้คืนข้อมูล{{ batchRestoreMode === 'all' ? 'ทั้งหมด' : 'ที่เลือก' }}</h3>
+              <h3 class="tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">{{ batchRestoreMode === 'all' ? $t('history.batchRestoreTitleAll') : $t('history.batchRestoreTitleSelected') }}</h3>
               <p class="tw-text-sm tw-text-gray-600 tw-mb-4">
-                คุณต้องการกู้คืนรายการนัดหมายทั้งหมด
-                <strong class="tw-text-indigo-700 tw-font-semibold">{{ batchRestoreIds.length }} รายการ</strong>
-                กลับไปยังหน้ารายการนัดหมายใช่หรือไม่?
+                {{ $t('history.batchRestoreText', { count: batchRestoreIds.length }) }}
               </p>
               <p class="tw-text-xs tw-text-purple-700 tw-bg-purple-50 tw-p-3 tw-rounded-xl tw-border tw-border-purple-200">
-                เมื่อกู้คืนแล้ว รายการทั้งหมดจะถูกเปลี่ยนเป็น <strong>"ข้อมูล backup"</strong> และนำกลับไปแสดงในหน้ารายการนัดหมายทันที 
-                พร้อมกับหยุดนับเวลาการลบถาวร (ข้อมูลจะไม่ถูกลบออกโดยอัตโนมัติอีกต่อไป)
+                {{ $t('history.batchRestoreNote') }}
               </p>
             </div>
 
@@ -694,14 +690,14 @@
                 :disabled="restoringAll"
                 class="tw-bg-slate-200 hover:tw-bg-slate-300 disabled:tw-opacity-50 tw-text-gray-700 tw-font-medium tw-py-2 tw-px-4 tw-rounded-lg tw-text-sm tw-transition-colors"
               >
-                ยกเลิก
+                {{ $t('common.cancel') }}
               </button>
               <button 
                 @click="confirmBatchRestore"
                 :disabled="restoringAll"
                 class="tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-medium tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm tw-transition-colors tw-shadow-sm"
               >
-                {{ restoringAll ? 'กำลังกู้คืน...' : 'ยืนยันกู้คืนข้อมูล' }}
+                {{ restoringAll ? $t('history.restoring') : $t('history.confirmRestore') }}
               </button>
             </div>
           </div>
@@ -823,7 +819,7 @@ const fetchHistory = async () => {
     const data = await $fetch('/api/appointments', { method: 'GET' })
     appointments.value = data || []
   } catch (error) {
-    errorMsg.value = error?.data?.statusMessage || error?.message || 'ไม่สามารถดึงข้อมูลประวัติได้'
+    errorMsg.value = error?.data?.statusMessage || error?.message || $t('history.fetchError')
   } finally {
     loading.value = false
   }
@@ -837,7 +833,7 @@ const fetchScanHistory = async () => {
     const data = await $fetch('/api/scan/history', { method: 'GET' })
     scanHistory.value = data || []
   } catch (error) {
-    errorMsg.value = error?.data?.statusMessage || error?.message || 'ไม่สามารถดึงประวัติการตรวจสอบได้'
+    errorMsg.value = error?.data?.statusMessage || error?.message || $t('history.fetchError')
   } finally {
     loading.value = false
   }
@@ -851,13 +847,13 @@ const purgeExpired = async () => {
   purging.value = true
   try {
     const res = await $fetch('/api/cleanup/purge', { method: 'POST' })
-    toastMsg.value = res?.message || 'ล้างข้อมูลที่หมดอายุแล้ว'
+    toastMsg.value = res?.message || $t('history.purgeSuccess')
     await fetchHistory()
     setTimeout(() => {
       toastMsg.value = ''
     }, 4000)
   } catch (error) {
-    alert('เกิดข้อผิดพลาดในการล้างข้อมูล: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
+    alert($t('history.purgeError', { detail: error?.data?.statusMessage || error?.message || $t('common.unknown') }))
     console.error('Purge error:', error)
   } finally {
     purging.value = false
@@ -906,9 +902,9 @@ const confirmBatchRestore = async () => {
 
     selectedIds.value = []
     closeBatchRestoreModal()
-    showToast(`กู้คืนข้อมูลสำเร็จ ${count} รายการ! สถานะเปลี่ยนเป็น "ข้อมูล backup"`)
+    showToast($t('history.batchRestoreSuccess', { count }))
   } catch (error) {
-    alert('เกิดข้อผิดพลาดในการกู้คืน: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
+    alert($t('history.restoreError', { detail: error?.data?.statusMessage || error?.message || $t('common.unknown') }))
     console.error('Batch restore error:', error)
   } finally {
     restoringAll.value = false
@@ -947,14 +943,14 @@ const confirmRestoreAppointment = async () => {
       appointments.value = appointments.value.filter(i => i.appointment_id !== appointmentId)
     }
 
-    toastMsg.value = `กู้คืนข้อมูลของ "${patientName}" สำเร็จ! สถานะเปลี่ยนเป็น "ข้อมูล backup"`
+    toastMsg.value = $t('history.restoreSuccess', { name: patientName })
     closeRestoreModal()
 
     setTimeout(() => {
       toastMsg.value = ''
     }, 4000)
   } catch (error) {
-    alert('เกิดข้อผิดพลาดในการกู้คืน: ' + (error?.data?.statusMessage || error?.message || 'ไม่ทราบสาเหตุ'))
+    alert($t('history.restoreError', { detail: error?.data?.statusMessage || error?.message || $t('common.unknown') }))
     console.error('Restore error:', error)
   } finally {
     restoringId.value = null

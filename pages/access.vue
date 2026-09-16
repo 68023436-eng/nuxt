@@ -4,12 +4,19 @@
       <!-- Logo -->
       
 
+      <!-- ปุ่มเลือกภาษา (มุมขวาบน) -->
+      <div class="tw-flex tw-justify-end tw-mb-2">
+        <div class="tw-bg-white/90 tw-backdrop-blur-sm tw-rounded-xl tw-shadow-md tw-p-1">
+          <LanguageSwitcher />
+        </div>
+      </div>
+
       <!-- Card -->
       <div class="tw-bg-white tw-rounded-3xl tw-shadow-2xl tw-p-8">
         <div class="tw-text-center tw-mb-6">
-          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">ระบบสิทธิ์เข้าถึง</h1>
-          <p class="tw-text-sm tw-text-slate-500 tw-mt-1">Hospital Appointment &amp; Parking Access</p>
-          <p class="tw-text-xs tw-text-slate-400 tw-mt-1">ระบุตัวตนด้วย ชื่อ, เบอร์โทร และเลือกบทบาท</p>
+          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">{{ $t('access.title') }}</h1>
+          <p class="tw-text-sm tw-text-slate-500 tw-mt-1">{{ $t('access.subtitle') }}</p>
+          <p class="tw-text-xs tw-text-slate-400 tw-mt-1">{{ $t('access.desc') }}</p>
         </div>
 
         <!-- Error -->
@@ -24,14 +31,14 @@
           <!-- ชื่อผู้ใช้ -->
           <div>
             <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-              ชื่อผู้ใช้ <span class="tw-text-red-500">*</span>
+              {{ $t('access.usernameLabel') }} <span class="tw-text-red-500">*</span>
             </label>
             <input
               v-model="form.full_name"
               type="text"
               required
               maxlength="100"
-              placeholder="ชื่อ-นามสกุล"
+              :placeholder="$t('access.usernamePlaceholder')"
               class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
             />
           </div>
@@ -39,7 +46,7 @@
           <!-- เบอร์โทรศัพท์ -->
           <div>
             <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-              เบอร์โทรศัพท์ <span class="tw-text-red-500">*</span>
+              {{ $t('access.phoneLabel') }} <span class="tw-text-red-500">*</span>
             </label>
             <input
               v-model="form.phone_number"
@@ -47,7 +54,7 @@
               required
               maxlength="10"
               pattern="[0-9]{9,10}"
-              placeholder="เช่น 0909009090"
+              :placeholder="$t('access.phonePlaceholder')"
               class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
             />
           </div>
@@ -55,9 +62,9 @@
           <!-- เลือกบทบาท (switch buttons) -->
           <div>
             <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-              เลือกบทบาท <span class="tw-text-red-500">*</span>
+              {{ $t('access.roleLabel') }} <span class="tw-text-red-500">*</span>
             </label>
-            <div class="tw-grid tw-grid-cols-2 tw-gap-2.5" role="radiogroup" aria-label="เลือกบทบาท">
+            <div class="tw-grid tw-grid-cols-2 tw-gap-2.5" role="radiogroup" :aria-label="$t('access.roleLabel')">
               <button
                 v-for="opt in roleOptions"
                 :key="opt.value"
@@ -88,12 +95,12 @@
             :disabled="isSubmitting"
             class="tw-w-full tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-semibold tw-py-3.5 tw-rounded-xl tw-shadow-lg tw-transition tw-mt-2"
           >
-            {{ isSubmitting ? 'กำลังตรวจสอบสิทธิ์...' : 'เข้าสู่ระบบ' }}
+            {{ isSubmitting ? $t('access.signingIn') : $t('access.signIn') }}
           </button>
         </form>
 
         <p class="tw-text-center tw-text-xs tw-text-slate-400 tw-mt-5">
-          เจ้าหน้าที่ต้องใช้ชื่อที่ตรงกับข้อมูลในระบบ 
+          {{ $t('access.staffNote') }}
         </p>
       </div>
     </div>
@@ -137,7 +144,7 @@ const handleLogin = async () => {
     const s = await login({ ...form })
     navigateTo(homePathFor(s?.role))
   } catch (error) {
-    errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่'
+    errorMsg.value = error?.data?.statusMessage || error?.message || $t('access.loginFailed')
   } finally {
     isSubmitting.value = false
   }
