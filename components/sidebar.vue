@@ -12,41 +12,46 @@
         />
       </div>
 
+      <!-- ปุ่มเปลี่ยนภาษา -->
+      <div class="tw-flex tw-justify-center tw-mt-5">
+        <LanguageSwitcher />
+      </div>
+
       <!-- เมนูนำทาง -->
-      <div class="tw-flex tw-flex-col tw-items-center tw-mt-10 tw-gap-2">
+      <div class="tw-flex tw-flex-col tw-items-center tw-mt-6 tw-gap-2">
         <button 
           v-if="isGuard"
           @click="goTo('verify')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >
-          ตรวจสอบ QR
+          {{ $t('sidebar.scan') }}
         </button>
         <button 
           v-if="!isGuard"
           @click="goTo('appointment')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >
-          ใบนัดหมาย
+          {{ $t('sidebar.appointment') }}
         </button>
         <button 
           v-if="canCreate && !isGuard && !asAdmin"
           @click="goTo('form')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >
-          กรอกข้อมูล
+          {{ $t('sidebar.form') }}
         </button>
         <button 
           @click="goTo('history')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >
-          ประวัติ
+          {{ $t('sidebar.history') }}
         </button>
         <button 
           v-if="asAdmin"
           @click="goTo('manageStaff')" 
           class="tw-p-3 tw-w-44 tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
         >
-          จัดการเจ้าหน้าที่
+          {{ $t('sidebar.manageStaff') }}
         </button>
       </div>
     </div>      
@@ -58,7 +63,7 @@
           {{ (session?.full_name || '?').charAt(0) }}
         </div>
         <div class="tw-min-w-0 tw-flex-1">
-          <p class="tw-text-sm tw-font-semibold tw-text-gray-800 tw-truncate">{{ session?.full_name || 'ไม่ระบุชื่อ' }}</p>
+          <p class="tw-text-sm tw-font-semibold tw-text-gray-800 tw-truncate">{{ session?.full_name || $t('sidebar.unknownName') }}</p>
           <p class="tw-text-xs tw-text-emerald-600 tw-font-medium">{{ roleLabel }}</p>
         </div>
       </div>
@@ -66,7 +71,7 @@
         @click="handleLogout"
         class="tw-mt-3 tw-w-full tw-text-left tw-text-sm tw-text-red-500 hover:tw-bg-red-50 tw-p-2 tw-rounded-lg tw-transition tw-font-medium"
       >
-        ออกจากระบบ ⏻
+        {{ $t('sidebar.logout') }} ⏻
       </button>
     </div>
   </div>
