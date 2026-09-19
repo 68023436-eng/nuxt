@@ -148,6 +148,7 @@ const fieldError = ref({})
 
 const inputClass = (hasError) => {
 return hasError ? 'border-red-500' : ''
+
 // แต่ละบทบาทมีหน้าแรกของตัวเอง (รปภ. → ตรวจสอบ QR ส่วนที่เหลือ → หน้าหลัก)
 const homePathFor = (role) => (role === 'Security_guard' ? '/verify' : '/')
 
@@ -160,15 +161,15 @@ onMounted(async () => {
 })
 
 const handleLogin = async () => {
-  errorMsg.value = ''
-  isSubmitting.value = true
-  try {
-    const s = await login({ ...form })
-    navigateTo(homePathFor(s?.role))
-  } catch (error) {
-    errorMsg.value = error?.data?.statusMessage || error?.message || $t('access.loginFailed')
-  } finally {
-    isSubmitting.value = false
+    errorMsg.value = ''
+    isSubmitting.value = true
+    try {
+      const s = await login({ ...form })
+      navigateTo(homePathFor(s?.role))
+    } catch (error) {
+      errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ'
+    } finally {
+      isSubmitting.value = false
+    }
   }
-}
 </script>
