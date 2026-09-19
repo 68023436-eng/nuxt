@@ -179,8 +179,8 @@
                         <div class="tw-text-xs tw-text-cyan-600 tw-font-medium tw-mt-0.5">{{ item.time_slot }}</div>
                       </td>
                       <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
-                        <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
-                          {{ statusLabel(item.status) }}
+                        <span :class="statusClass(item.display_status || item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
+                          {{ statusLabel(item.display_status || item.status) }}
                         </span>
                       </td>
                       <td class="tw-px-5 tw-py-4 tw-text-center tw-whitespace-nowrap">
@@ -244,8 +244,8 @@
                         <div class="tw-text-xs tw-text-cyan-600 tw-font-medium tw-mt-0.5">{{ item.time_slot }}</div>
                       </td>
                       <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
-                        <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
-                          {{ statusLabel(item.status) }}
+                        <span :class="statusClass(item.display_status || item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
+                          {{ statusLabel(item.display_status || item.status) }}
                         </span>
                       </td>
                       <td class="tw-px-5 tw-py-4 tw-text-center tw-whitespace-nowrap">
@@ -421,8 +421,8 @@
                 <div class="tw-text-xs tw-text-purple-600 tw-font-medium tw-mt-0.5">{{ item.time_slot }}</div>
               </td>
               <td class="tw-px-5 tw-py-4 tw-whitespace-nowrap">
-                <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
-                  {{ statusLabel(item.status) }}
+                <span :class="statusClass(item.display_status || item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
+                  {{ statusLabel(item.display_status || item.status) }}
                 </span>
               </td>
               <td class="tw-px-5 tw-py-4">

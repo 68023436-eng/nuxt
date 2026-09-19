@@ -18,6 +18,7 @@ export interface AccessSession {
   full_name: string
   phone_number: string
   role: AccessRole
+  user_id?: string
   iat: number
 }
 

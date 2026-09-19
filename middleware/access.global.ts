@@ -24,6 +24,9 @@ function decodeRoleFromCookie(token: string | undefined): string | null {
 // หน้าทีี่ รปภ. ห้ามเห็นข้อมูลนัดหมาย/ข้อมูลผู้ป่วยทั้งหมด
 const GUARD_RESTRICTED_PREFIXES = ['/appointments', '/patient-form', '/admin']
 
+// หน้าเฉพาะเจ้าหน้าที่ — ผู้ป่วย (Patient) ดูได้เฉพาะใบนัดของตัวเอง ไม่เข้าแบบฟอร์ม/จัดการ
+const STAFF_ONLY_PREFIXES = ['/patient-form', '/admin']
+
 export default defineNuxtRouteMiddleware(async (to) => {
   // หน้าเข้าถึงระบบ ไม่ต้องตรวจ
   if (to.path === '/access') return
@@ -49,6 +52,15 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (!hasSession) {
     return navigateTo('/access')
+  }
+
+  // ผู้ป่วย (Patient): ห้ามเข้าแบบฟอร์ม/หน้า admin (incl. direct URL)
+  if (role === 'Patient') {
+    const staffOnly = STAFF_ONLY_PREFIXES.some((p) => to.path.startsWith(p))
+    const isMain = to.path === '/'
+    if (staffOnly || isMain) {
+      return navigateTo('/appointments')
+    }
   }
 
   // รปภ. ดูได้เฉพาะหน้า ตรวจสอบ / ประวัติ(ของตัวเอง) — ไม่อนุญาตให้เปิดหน้าข้อมูลผู้ป่วย

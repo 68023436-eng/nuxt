@@ -37,8 +37,9 @@ export const useSession = () => {
     return session.value
   }
 
-  // ระบุตัวตน (ชื่อ + เบอร์โทร + role) — คล้าย login
-  const login = async (payload: { full_name: string; phone_number: string; role: AccessRole }) => {
+  // ระบุตัวตน — ทุกบทบาท: { first_name, last_name, phone_number, role }
+  // (ไม่ใช้ password/OTP — ผู้ป่วยใช้ ชื่อ+นามสกุล+เบอร์, เจ้าหน้าที่ใช้ ชื่อ+นามสกุล+เบอร์+role)
+  const login = async (payload: { role: AccessRole; [key: string]: unknown }) => {
     const res = await $fetch<{ session: any }>('/api/session', {
       method: 'POST',
       body: payload,

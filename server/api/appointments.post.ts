@@ -1,6 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { ALLOWED_TIME_SLOTS } from '~/constants/appointments'
-import { composeFullName, normalizePhone } from '~/utils/name'
+import { normalizePhone } from '~/utils/name'
 
 /** ฟังก์ชัน sanitize ข้อความป้องกัน XSS */
 function sanitizeString(str: string): string {
@@ -16,12 +16,11 @@ function sanitizeString(str: string): string {
 /** รายการ status ที่อนุญาต */
 const ALLOWED_STATUSES = ['active', 'completed', 'cancelled'] as const
 
-/** รูปแบบเบอร์โทรศัพท์ (ตัวเลข 9-10 หลัก) */
-const PHONE_REGEX = /^\d{9,10}$/
-
 /**
  * POST /api/appointments
- * สร้างนัดหมายใหม่ พร้อม validation ครบถ้วน
+ * สร้างนัดหมายใหม่ — ต้องเลือกผู้ป่วยที่มีบัญชีแล้ว (patient_user_id)
+ * ชื่อ/เบอร์โทรของผู้ป่วยนำมาจากบัญชี (hospital_user) ฝั่ง Server
+ * ไม่รับ/ไม่ trust ชื่อ+เบอร์จาก client (Req 11, 16)
  */
 export default defineEventHandler(async (event) => {
   try {
@@ -31,25 +30,23 @@ export default defineEventHandler(async (event) => {
 
     // === Input Validation ===
 
-    // 1. ตรวจสอบว่ามีข้อมูลที่จำเป็นครบ
-    if ((!body.first_name && !body.patient_name) || !body.appointment_date || !body.time_slot) {
+    // 1. ต้องเลือกบัญชีผู้ป่วย (มี Role=Patient ใน hospital_user)
+    if (!body.patient_user_id || !body.appointment_date || !body.time_slot) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'กรุณากรอกข้อมูลให้ครบ (ชื่อผู้ป่วย, วันนัดหมาย, ช่วงเวลา)',
+        statusMessage: 'กรุณาเลือกผู้ป่วยที่มีบัญชี และระบุวันนัดหมาย/ช่วงเวลาให้ครบ',
       })
     }
 
-    // 2. ตรวจสอบชื่อผู้ป่วย (first_name + last_name, แยกช่อง)
-    //    - normalize (trim, ลบช่องว่างซ้อน, ตัดคำนำหน้า) ตอนส่งออกเป็น patient_name
-    //    - ใช้ composeFullName จาก server/utils/name.ts (เดียวกับตอน query/สร้าง session)
-    const firstName = String(body.first_name ?? body.patient_name ?? '').trim()
-    const lastName = String(body.last_name ?? '').trim()
+    const patientUserId = String(body.patient_user_id).trim()
 
-    const patientName = sanitizeString(composeFullName(firstName, lastName))
-    if (patientName.length === 0 || firstName.length > 100 || lastName.length > 100) {
+    // 2. ตรวจสอบวันนัดหมาย (format YYYY-MM-DD)
+    const appointmentDate = String(body.appointment_date).trim()
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(appointmentDate)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'ชื่อ-นามสกุลผู้ป่วยต้องมีความยาว 1-100 ตัวอักษร',
+        statusMessage: 'วันนัดหมายต้องอยู่ในรูปแบบ YYYY-MM-DD',
       })
     }
 
@@ -108,7 +105,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 8. กำหนดค่า dept_id (default: 91)
+    // 6. กำหนดค่า dept_id (default: 91)
     let deptId = 91
     if (body.dept_id != null && body.dept_id !== '') {
       const parsedDeptId = Number(body.dept_id)
@@ -117,7 +114,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 9. กำหนดค่า location_id (default: 1)
+    // 7. กำหนดค่า location_id (default: 1)
     let locationId = 1
     if (body.location_id != null && body.location_id !== '') {
       const parsedLocationId = Number(body.location_id)
@@ -126,15 +123,44 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // 8. ดึงข้อมูลบัญชีผู้ป่วยจาก hospital_user (Server-side — ไม่ Trust จาก client)
+    const client = await serverSupabaseClient(event)
+    const { data: patient, error: patientErr } = await client
+      .from('hospital_user')
+      .select('user_id, full_name, phone_number, role, is_active')
+      .eq('user_id', patientUserId)
+      .single()
+
+    if (patientErr || !patient) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'ไม่พบบัญชีผู้ป่วยที่เลือก กรุณาเลือกผู้ป่วยจากรายการที่มีบัญชี',
+      })
+    }
+    if (patient.role !== 'Patient') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'บัญชีที่เลือกไม่ใช่ผู้ป่วย (Patient)',
+      })
+    }
+    if (patient.is_active === false) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'บัญชีผู้ป่วยนี้ถูกปิดใช้งาน',
+      })
+    }
+
+    const patientName = sanitizeString(patient.full_name)
+    const phoneNumber = patient.phone_number ? normalizePhone(patient.phone_number) : null
+
     // === สร้าง QR Token อัตโนมัติ (ใช้ crypto สำหรับความปลอดภัย) ===
     const qrToken = body.qr_token
       ? sanitizeString(String(body.qr_token))
       : `QR-${crypto.randomUUID().replace(/-/g, '').substring(0, 24).toUpperCase()}`
 
     // === Insert ข้อมูลเข้า Supabase ===
-    const client = await serverSupabaseClient(event)
-
     const insertData: Record<string, any> = {
+      user_id: patientUserId,
       patient_name: patientName,
       phone_number: phoneNumber,
       license_plate: licensePlate,

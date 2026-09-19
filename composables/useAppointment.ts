@@ -13,6 +13,12 @@ export const useAppointment = () => {
   /** สีของ badge ตามสถานะ */
   const statusClass = (status: string): string => {
     const classes: Record<string, string> = {
+      // 4 สถานะหลัก
+      'has_right': 'tw-bg-green-100 tw-text-green-700',
+      'used': 'tw-bg-blue-100 tw-text-blue-700',
+      'not_used': 'tw-bg-amber-100 tw-text-amber-700',
+      'no_right': 'tw-bg-red-100 tw-text-red-700',
+      // fallback สำหรับค่าเก่า (ในกรณีที่ display_status ไม่มา)
       active: 'tw-bg-green-100 tw-text-green-700',
       completed: 'tw-bg-blue-100 tw-text-blue-700',
       cancelled: 'tw-bg-red-100 tw-text-red-700',

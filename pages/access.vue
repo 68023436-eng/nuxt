@@ -59,7 +59,25 @@
             />
           </div>
 
-          <!-- เลือกบทบาท (switch buttons) -->
+            <div>
+              <label for="access-phone" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                เบอร์โทรศัพท์ <span class="tw-text-red-500">*</span>
+              </label>
+              <input
+                id="access-phone"
+                v-model="form.phone_number"
+                type="tel"
+                autocomplete="tel"
+                maxlength="15"
+                placeholder="เช่น 0909009090"
+                inputmode="numeric"
+                :class="inputClass(fieldError.phone_number)"
+                @input="clearFieldError('phone_number')"
+              />
+              <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.phone_number }}</p>
+            </div>
+
+            <!-- เลือกบทบาท (switch buttons) -->
           <div>
             <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
               {{ $t('access.roleLabel') }} <span class="tw-text-red-500">*</span>
@@ -118,7 +136,8 @@ const { login, refresh } = useSession()
 const roleOptions = useRoleOptions()
 
 const form = reactive({
-  full_name: '',
+  first_name: '',
+  last_name: '',
   phone_number: '',
   role: 'Patient',
 })
