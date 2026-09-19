@@ -146,11 +146,6 @@ const isSubmitting = ref(false)
 const errorMsg = ref('')
 const fieldError = ref({})
 
-const inputClass = (hasError) => {
-return hasError
-    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-    : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500'
-}
 // แต่ละบทบาทมีหน้าแรกของตัวเอง (รปภ. → ตรวจสอบ QR ส่วนที่เหลือ → หน้าหลัก)
 const homePathFor = (role) => (role === 'Security_guard' ? '/verify' : '/')
 
