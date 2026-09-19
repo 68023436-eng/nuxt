@@ -71,10 +71,10 @@
                 maxlength="15"
                 placeholder="เช่น 0909009090"
                 inputmode="numeric"
-                :class="inputClass(fieldError.phone_number)"
+                :class="inputClass(fieldError?.phone_number)"
                 @input="clearFieldError('phone_number')"
               />
-              <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.phone_number }}</p>
+              <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError?.phone_number }}</p>
             </div>
 
             <!-- เลือกบทบาท (switch buttons) -->
