@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
       full_name: session.full_name,
       phone_number: session.phone_number,
       role: session.role,
+      user_id: session.user_id || null,
       permissions: ROLE_PERMISSIONS[session.role] || [],
       server_today: bangkokToday(),
     },

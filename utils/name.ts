@@ -40,6 +40,20 @@ export function normalizeNameForMatch(name: string): string {
   return normalizeName(name).toLowerCase()
 }
 
+/** normalize ชื่อสำหรับเทียบกันแบบไม่สนใจช่องว่าง (Patient login):
+ *  ลบช่องว่างทั้งหมด + ตัดคำนำหน้า + ไม่สนใจตัวพิมพ์
+ *  เช่น "นางสาว นิศา ใจดี" กับ "นางสาวนิศาใจดี" ถือว่าตรงกัน */
+export function normalizeNameForMatchNoSpaces(name: string): string {
+  const compact = String(name ?? '').toLowerCase().replace(/\s+/g, '')
+  for (const t of TITLE_PREFIXES) {
+    const tLower = t.toLowerCase()
+    if (compact.startsWith(tLower) && compact.length > tLower.length) {
+      return compact.slice(tLower.length)
+    }
+  }
+  return compact
+}
+
 /** normalize เบอร์โทร: ตัด space/ขีด แล้วเก็บเฉพาะตัวเลข */
 export function normalizePhone(phone: string | null | undefined): string {
   if (!phone) return ''

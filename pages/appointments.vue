@@ -90,8 +90,8 @@
 
               <!-- สถานะ -->
               <td class="tw-px-5 tw-py-4">
-                <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
-                  {{ statusLabel(item.status) }}
+                <span :class="statusClass(item.display_status || item.status)" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">
+                  {{ statusLabel(item.display_status || item.status) }}
                 </span>
               </td>
 
@@ -278,8 +278,8 @@
                 </div>
                 <div>
                   <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">สถานะ</p>
-                  <span :class="statusClass(selectedAppointment.status)" class="tw-inline-block tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-medium tw-mt-0.5">
-                    {{ statusLabel(selectedAppointment.status) }}
+                  <span :class="statusClass(selectedAppointment.display_status || selectedAppointment.status)" class="tw-inline-block tw-px-3 tw-py-1 tw-rounded-full tw-text-sm tw-font-medium tw-mt-0.5">
+                    {{ statusLabel(selectedAppointment.display_status || selectedAppointment.status) }}
                   </span>
                 </div>
               </div>

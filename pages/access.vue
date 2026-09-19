@@ -6,7 +6,9 @@
         <div class="tw-text-center tw-mb-6">
           <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">ระบบสิทธิ์เข้าถึง</h1>
           <p class="tw-text-sm tw-text-slate-500 tw-mt-1">Hospital Appointment &amp; Parking Access</p>
-          <p class="tw-text-xs tw-text-slate-400 tw-mt-1">ระบุตัวตนด้วย ชื่อ, เบอร์โทร และเลือกบทบาท</p>
+          <p class="tw-text-xs tw-text-slate-400 tw-mt-1">
+            ทุกบทบาท: ชื่อ + นามสกุล + เบอร์โทรศัพท์ (ไม่ใช้รหัสผ่าน/OTP)
+          </p>
         </div>
 
         <!-- Error banner -->
@@ -19,44 +21,60 @@
         </div>
 
         <form @submit.prevent="handleLogin" novalidate class="tw-space-y-5">
-          <!-- ชื่อผู้ใช้ -->
-          <div>
-            <label for="access-full-name" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-              ชื่อผู้ใช้ <span class="tw-text-red-500">*</span>
-            </label>
-            <input
-              id="access-full-name"
-              v-model="form.full_name"
-              type="text"
-              autocomplete="name"
-              maxlength="100"
-              placeholder="ชื่อ-นามสกุล"
-              :class="inputClass(fieldError.full_name)"
-              @input="onNameInput"
-            />
-            <p v-if="fieldError.full_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.full_name }}</p>
-          </div>
+            <!-- ชื่อ / นามสกุล / เบอร์โทร (ทุก Role ใช้ช่องเดียวกัน แยกชื่อ-นามสกุล) -->
+            <div>
+              <label for="access-first-name" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                ชื่อ <span class="tw-text-red-500">*</span>
+              </label>
+              <input
+                id="access-first-name"
+                v-model="form.first_name"
+                type="text"
+                autocomplete="given-name"
+                maxlength="50"
+                placeholder="กรุณากรอกชื่อ"
+                :class="inputClass(fieldError.first_name)"
+                @input="clearFieldError('first_name')"
+              />
+              <p v-if="fieldError.first_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.first_name }}</p>
+            </div>
 
-          <!-- เบอร์โทรศัพท์ -->
-          <div>
-            <label for="access-phone" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-              เบอร์โทรศัพท์ <span class="tw-text-red-500">*</span>
-            </label>
-            <input
-              id="access-phone"
-              v-model="form.phone_number"
-              type="tel"
-              autocomplete="tel"
-              maxlength="10"
-              placeholder="เช่น 0909009090"
-              inputmode="numeric"
-              :class="inputClass(fieldError.phone_number)"
-              @input="clearFieldError('phone_number')"
-            />
-            <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.phone_number }}</p>
-          </div>
+            <div>
+              <label for="access-last-name" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                นามสกุล <span class="tw-text-red-500">*</span>
+              </label>
+              <input
+                id="access-last-name"
+                v-model="form.last_name"
+                type="text"
+                autocomplete="family-name"
+                maxlength="50"
+                placeholder="กรุณากรอกนามสกุล"
+                :class="inputClass(fieldError.last_name)"
+                @input="clearFieldError('last_name')"
+              />
+              <p v-if="fieldError.last_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.last_name }}</p>
+            </div>
 
-          <!-- เลือกบทบาท (switch buttons) -->
+            <div>
+              <label for="access-phone" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+                เบอร์โทรศัพท์ <span class="tw-text-red-500">*</span>
+              </label>
+              <input
+                id="access-phone"
+                v-model="form.phone_number"
+                type="tel"
+                autocomplete="tel"
+                maxlength="15"
+                placeholder="เช่น 0909009090"
+                inputmode="numeric"
+                :class="inputClass(fieldError.phone_number)"
+                @input="clearFieldError('phone_number')"
+              />
+              <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.phone_number }}</p>
+            </div>
+
+            <!-- เลือกบทบาท (switch buttons) -->
           <div>
             <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
               เลือกบทบาท <span class="tw-text-red-500">*</span>
@@ -93,7 +111,7 @@
         </form>
 
         <p class="tw-text-center tw-text-xs tw-text-slate-400 tw-mt-5">
-          เจ้าหน้าที่ต้องใช้ชื่อที่ตรงกับข้อมูลในระบบ
+          ใช้ชื่อที่ตรงกับข้อมูลในระบบ โดยไม่ต้องใช้รหัสผ่าน
         </p>
       </div>
     </div>
@@ -102,7 +120,6 @@
 
 <script setup>
 import { ROLE_COLORS, ROLE_ICONS } from '~/constants/roles'
-import { collapseSpaces } from '~/utils/name'
 
 definePageMeta({
   middleware: false,
@@ -110,24 +127,20 @@ definePageMeta({
 
 const { session, login } = useSession()
 
-// ช่องว่างซ้อน (space ยาวๆ) ระหว่างชื่อ-นามสกุล จะถูกย่อเป็นช่องว่างเดียวทันที
-const onNameInput = () => {
-  form.full_name = collapseSpaces(form.full_name)
-  clearFieldError('full_name')
-}
-
 // ข้อมูล role สำหรับแสดงเป็น switch button
 const roleOptions = useRoleOptions()
 
 // แบบฟอร์ม + สถานะ
 const form = reactive({
-  full_name: '',
+  first_name: '',
+  last_name: '',
   phone_number: '',
   role: 'Patient',
 })
 
 const fieldError = reactive({
-  full_name: '',
+  first_name: '',
+  last_name: '',
   phone_number: '',
 })
 
@@ -154,10 +167,8 @@ const clearFieldError = (field) => {
 
 const validate = () => {
   let ok = true
-  fieldError.full_name = form.full_name.trim() ? '' : 'กรุณากรอกชื่อผู้ใช้'
-  if (fieldError.full_name) ok = false
 
-  const phone = form.phone_number.trim()
+  const phone = form.phone_number.trim().replace(/[\s-]/g, '')
   if (!phone) {
     fieldError.phone_number = 'กรุณากรอกเบอร์โทรศัพท์'
     ok = false
@@ -168,12 +179,18 @@ const validate = () => {
     fieldError.phone_number = ''
   }
 
+  // ทุก Role: ชื่อ + นามสกุล (+ เบอร์โทร + role ตาม Role) — validate ชื่อ/นามสกุลเหมือนกันทั้งหมด
+  fieldError.first_name = form.first_name.trim() ? '' : 'กรุณากรอกชื่อ'
+  if (fieldError.first_name) ok = false
+  fieldError.last_name = form.last_name.trim() ? '' : 'กรุณากรอกนามสกุล'
+  if (fieldError.last_name) ok = false
+
   // role ต้องเป็นค่าในรายการที่อนุญาต (กันส่งค่าผิดเข้าไป)
   if (!roleOptions.some(r => r.value === form.role)) {
     form.role = 'Patient'
   }
 
-  return ok && !fieldError.full_name
+  return ok
 }
 
 // ============================================================
@@ -207,7 +224,15 @@ const handleLogin = async () => {
 
   isSubmitting.value = true
   try {
-    await login({ ...form })
+    // ส่งข้อมูลไปตรวจที่ Server (Server เป็นฝ่าย Normalize + ตรวจค่าทั้งหมดเป็นของ Account เดียวกัน)
+    const payload = {
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      phone_number: form.phone_number.trim(),
+      role: form.role,
+    }
+
+    await login(payload)
     // ไปหน้าเริ่มต้นตามบทบาท (รปภ. จะไปหน้า ตรวจสอบQR)
     if (useRoute().path === '/access') {
       await navigateTo(homeRoute(form.role))

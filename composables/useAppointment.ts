@@ -5,9 +5,15 @@
 import { RETENTION_DAYS } from '~/constants/appointments'
 
 export const useAppointment = () => {
-  /** สีของ badge ตามสถานะ */
+  /** สีของ badge ตามสถานะ (เฉพาะ 4 สถานะ — คำนวณจากข้อมูลจริงที่ server ส่งมา) */
   const statusClass = (status: string): string => {
     const classes: Record<string, string> = {
+      // 4 สถานะหลัก
+      'has_right': 'tw-bg-green-100 tw-text-green-700',
+      'used': 'tw-bg-blue-100 tw-text-blue-700',
+      'not_used': 'tw-bg-amber-100 tw-text-amber-700',
+      'no_right': 'tw-bg-red-100 tw-text-red-700',
+      // fallback สำหรับค่าเก่า (ในกรณีที่ display_status ไม่มา)
       active: 'tw-bg-green-100 tw-text-green-700',
       completed: 'tw-bg-blue-100 tw-text-blue-700',
       cancelled: 'tw-bg-red-100 tw-text-red-700',
@@ -16,12 +22,25 @@ export const useAppointment = () => {
     return classes[status] || 'tw-bg-gray-100 tw-text-gray-700'
   }
 
-  /** แปลงข้อความสถานะเป็นภาษาไทย */
+  /**
+   * แปลงข้อความสถานะเป็นภาษาไทย (รับ display_status ที่ server คำนวณจากข้อมูลจริง)
+   *
+   * 4 สถานะของการนัดหมายเท่านั้น:
+   *   has_right = มีสิทธิ
+   *   used      = ใช้สิทธิไปแล้ว
+   *   not_used  = ไม่ได้ใช้สิทธิ
+   *   no_right  = ไม่มีสิทธิ
+   */
   const statusLabel = (status: string): string => {
     const labels: Record<string, string> = {
-      active: 'กำลังใช้งาน',
-      completed: 'เสร็จสิ้น',
-      cancelled: 'ยกเลิกแล้ว',
+      'has_right': 'มีสิทธิ',
+      'used': 'ใช้สิทธิไปแล้ว',
+      'not_used': 'ไม่ได้ใช้สิทธิ',
+      'no_right': 'ไม่มีสิทธิ',
+      // fallback สำหรับค่าเก่า
+      active: 'มีสิทธิ',
+      completed: 'ใช้สิทธิไปแล้ว',
+      cancelled: 'ไม่มีสิทธิ',
       backup: 'ข้อมูล backup',
     }
     return labels[status] || status || '-'

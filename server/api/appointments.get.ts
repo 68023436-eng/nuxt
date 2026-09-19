@@ -1,6 +1,27 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { RETENTION_DAYS } from '~/constants/appointments'
-import { normalizeName, normalizePhone } from '~/utils/name'
+
+/**
+ * สถานะแสดงผลของการนัดหมาย — คำนวณจากข้อมูลจริง (ไม่เก็บใน DB)
+ * 4 สถานะเท่านั้น:
+ *   has_right = มีสิทธิ        → นัดยังไม่ถึง/ถึงวันนี้ ยังไม่เคยสแกนผ่าน
+ *   used      = ใช้สิทธิไปแล้ว  → มีประวัติสแกนผ่าน (scan_history result='valid') หรือนัดเสร็จสิ้นแล้ว
+ *   not_used  = ไม่ได้ใช้สิทธิ  → นัดผ่านวันไปแล้วแต่ไม่เคยสแกนผ่าน
+ *   no_right  = ไม่มีสิทธิ      → รายการถูกยกเลิก/ลบแล้ว
+ */
+function deriveAppointmentStatus(item: any, todayKey: string, usedAppointmentIds: Set<string>): string {
+  // ยกเลิก/ลบแล้ว → ไม่มีสิทธิ
+  if (item.status === 'cancelled' || item.deleted_at) return 'no_right'
+  // เสร็จสิ้นแล้ว → ถือว่าใช้สิทธิไปแล้ว
+  if (item.status === 'completed') return 'used'
+  // เคยสแกนผ่าน (จริงที่รปภ.กด valid) → ใช้สิทธิไปแล้ว
+  if (item.appointment_id != null && usedAppointmentIds.has(String(item.appointment_id))) return 'used'
+  // วันนัดผ่านไปแล้ว และไม่เคยสแกนผ่าน → ไม่ได้ใช้สิทธิ
+  const apptKey = bangkokDateKey(item.appointment_date)
+  if (apptKey && apptKey < todayKey) return 'not_used'
+  // ยังมาไม่ถึง / ถึงวันนี้ และยังไม่เคยใช้ → มีสิทธิ
+  return 'has_right'
+}
 
 /**
  * GET /api/appointments
@@ -26,7 +47,7 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const retentionDays = RETENTION_DAYS
 
-    // Patient ดูได้เฉพาะนัดของตัวเองเท่านั้น (ผูกจาก session: ชื่อ + เบอร์)
+    // Patient ดูได้เฉพาะนัดของตัวเองเท่านั้น (ผูกจาก session.user_id = บัญชีผู้ป่วย)
     // — ไม่รับ user_id/patient_id จาก query เลย ป้องกันการแก้พารามิเตอร์เพื่อดูของคนอื่น
     const query = client
       .from('appointments')
@@ -48,11 +69,13 @@ export default defineEventHandler(async (event) => {
       `)
 
     if (role === 'Patient') {
-      // ผูกเจ้าของนัดจาก session (ไม่รับ user_id/patient_id จาก client)
-      // normalize ชื่อ/เบอร์ให้ตรงกับที่ clinic เก็บไว้ตอนสร้าง (server/utils/name.ts)
-      query
-        .eq('phone_number', normalizePhone(session.phone_number))
-        .eq('patient_name', normalizeName(session.full_name))
+      // Patient ดูได้เฉพาะนัดของตัวเองเท่านั้น
+      // ผูกเจ้าของจาก session.user_id (account ที่สร้างไว้) — ไม่รับ user_id/patient_id จาก client
+      // (Req 10: ผู้ป่วยเห็นเฉพาะนัดของตัวเอง ผูกจาก Account ไม่สามารถแก้จาก URL ได้)
+      if (!session.user_id) {
+        throw createError({ statusCode: 403, statusMessage: 'ไม่สามารถระบุบัญชีผู้ป่วยได้ กรุณาเข้าสู่ระบบใหม่' })
+      }
+      query.eq('user_id', session.user_id)
     }
 
     const { data, error } = await query.order('created_at', { ascending: false })
@@ -73,6 +96,26 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // === ดึงรายการที่เคย "สแกนผ่าน" (ใช้สิทธิแล้ว) จาก scan_history ===
+    // appointment_id ใน scan_history เป็น text (อาจมี '50' หรือ 'null') → ทำ Set เทียบกับ id ของนัด
+    const usedAppointmentIds = new Set<string>()
+    try {
+      const { data: usedRows } = await client
+        .from('scan_history')
+        .select('appointment_id')
+        .eq('result', 'valid')
+      if (usedRows && usedRows.length > 0) {
+        for (const row of usedRows) {
+          const id = String(row?.appointment_id ?? '').trim()
+          if (id && id !== 'null') usedAppointmentIds.add(id)
+        }
+      }
+    } catch (scanErr: any) {
+      // โต๊ะประวัติยังไม่มี / ยังไม่ migrate → ไม่พังการแสดงสถานะ (ทุกนัดนับเป็นยังไม่ใช้)
+      console.warn('scan_history lookup skipped:', scanErr?.message || scanErr)
+    }
+    const todayKey = bangkokToday()
+
     const now = Date.now()
     const RETENTION_MS = retentionDays * 24 * 60 * 60 * 1000
 
@@ -91,6 +134,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // แนบเหลือวันที่จะถูกลบถาวร เพื่อให้หน้าเว็บแสดง "เหลือ X วัน"
+    // และแนบ display_status (สถานะ 4 แบบคำนวณจากข้อมูลจริง)
     return filtered.map((item: any) => {
       if (item.deleted_at) {
         const elapsed = now - new Date(item.deleted_at).getTime()
@@ -98,6 +142,7 @@ export default defineEventHandler(async (event) => {
       } else {
         item.days_until_purge = null
       }
+      item.display_status = deriveAppointmentStatus(item, todayKey, usedAppointmentIds)
       return item
     })
   } catch (err: any) {
