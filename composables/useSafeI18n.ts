@@ -8,7 +8,7 @@ import { getCurrentInstance } from 'vue'
  */
 export const useSafeI18n = (): ReturnType<typeof useI18n> => {
   if (getCurrentInstance()) {
-    return useI18n()
+    return useI18n() as unknown as ReturnType<typeof useI18n>
   }
   return useNuxtApp().$i18n as unknown as ReturnType<typeof useI18n>
 }

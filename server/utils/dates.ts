@@ -17,7 +17,11 @@ function toParts(d: Date): { year: string; month: string; day: string } {
   for (const p of parts) {
     if (p.type !== 'literal' && p.value) map[p.type] = p.value
   }
-  return { year: map.year, month: map.month, day: map.day }
+  return {
+    year: map.year ?? '',
+    month: map.month ?? '',
+    day: map.day ??''
+  }
 }
 
 /** วันปัจจุบันตาม Asia/Bangkok ในรูป 'YYYY-MM-DD' */
@@ -42,7 +46,7 @@ export function isAppointmentToday(appointmentDate: string | null | undefined): 
 /** ขอบเขตของ "วันนี้" ตาม Asia/Bangkok ใน UTC: [start, end) */
 export function bangkokDayRangeToday(): { start: Date; end: Date } {
   const todayKey = bangkokToday()
-  const [y, m, d] = todayKey.split('-').map(Number)
+  const [y, m, d] = todayKey.split('-').map(Number) as [number, number, number]
   // 00:00 Bangkok = 17:00 UTC ของวันก่อนหน้า
   const start = new Date(Date.UTC(y, m - 1, d - 1, 17, 0, 0))
   const end = new Date(Date.UTC(y, m - 1, d, 17, 0, 0))

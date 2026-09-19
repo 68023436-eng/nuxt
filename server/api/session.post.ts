@@ -70,15 +70,17 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 401, statusMessage: 'ไม่มีบัญชีผู้ใช้นี้' })
       }
 
-      if (matched.is_active === false) {
+      const m = matched as any
+
+      if (m.matched.is_active === false) {
         throw createError({ statusCode: 401, statusMessage: 'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่' })
       }
 
       session = {
-        full_name: matched.full_name,
-        phone_number: matched.phone_number || '',
+        full_name: m.matched.full_name,
+        phone_number: m.matched.phone_number || '',
         role,
-        user_id: matched.user_id,
+        user_id: m.matched.user_id,
         iat: Math.floor(Date.now() / 1000),
       }
     } else {
@@ -102,7 +104,7 @@ export default defineEventHandler(async (event) => {
       const client = await serverSupabaseClient(event)
       const { data: users, error: userErr } = await client
         .from('hospital_user')
-        .select('full_name, role, phone_number')
+        .select('user_id, full_name, role, phone_number')
         .eq('role', role)
         .or('is_active.is.null,is_active.eq.true')
 
@@ -139,16 +141,17 @@ export default defineEventHandler(async (event) => {
           statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ หรือเลือกบทบาทเจ้าหน้าที่ผิดพลาด',
         })
       }
-    }
-    // 3. สร้าง session และเซ็นต์ลง cookie
-    const session: AccessSession = {
-      full_name: fullName,
-      phone_number: phoneNumber,
-      role,
-      iat: Math.floor(Date.now() / 1000),
-    }
 
-    // 2. เซ็นต์ session ลง cookie
+      matchedUserId = (matched as any).user_id || null
+      session = {
+        full_name: fullName,
+        phone_number: phoneNumber,
+        role,
+        user_id: (matchedUserId || undefined) as any,
+        iat: Math.floor(Date.now() / 1000),
+      }
+    }
+    // เซ็นต์ session ลง cookie
     setAccessSession(event, session)
 
     return {

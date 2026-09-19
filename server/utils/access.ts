@@ -66,7 +66,7 @@ export function unsealAccessSession(token: string | undefined | null, maxAgeSeco
   const parts = token.split('.')
   if (parts.length !== 2) return null
 
-  const [body, sig] = parts
+  const [body, sig] = parts as [string , string]
   const expected = sign(body)
   if (!timingSafeEqualStr(expected, sig)) return null
 

@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
     let foundRecord: any = null
     let todaysRecord: any = null
     if (method === 'qr') {
-      const { data, error } = await client
+      const { data, error } = await (client.from('appointments') as any)
         .from('appointments')
         .select('appointment_id, patient_name, phone_number, appointment_date')
         .eq('qr_token', qrToken)
@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
       }
     } else {
       // มีได้หลายนัด → ต้องเจอ appointment ที่ active และนัดตรงกับ "วันนี้" เท่านั้น
-      const { data, error } = await client
+      const { data, error } = await (client.from('appointments') as any)
         .from('appointments')
         .select('appointment_id, patient_name, appointment_date')
         .eq('phone_number', phoneNumber)
@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
 
     // === ป้องกันสแกน/ค้นหาเดิมซ้ำ (เดียวกัน ภายใน 10 วิ) → ไม่ต้องบันทึกซ้ำ ===
     try {
-      const dupQ = client
+      const dupQ = (client.from('scan_history') as any)
         .from('scan_history')
         .select('id')
         .eq('method', method)
@@ -119,9 +119,9 @@ export default defineEventHandler(async (event) => {
         dupQ.eq('phone_number', phoneNumber)
       }
       const { data: dups } = await dupQ.limit(1)
-      if (!(dups && dups.length > 0)) {
-        await client.from('scan_history').insert({
-          method,
+      if (!dups || dups.length === 0) {
+        await (client.from('scan_history') as any).insert({
+        method,
           qr_token: qrToken,
           phone_number: phoneToLog,
           patient_name: foundRecord?.patient_name ?? null,
