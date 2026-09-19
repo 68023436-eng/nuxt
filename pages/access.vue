@@ -39,42 +39,33 @@
               required
               maxlength="100"
               :placeholder="$t('access.usernamePlaceholder')"
+              autocomplete="name"
+              @input="clearFieldError('full_name')"
               class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
             />
+            <p v-if="fieldError.full_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.full_name }}</p>
           </div>
 
           <!-- เบอร์โทรศัพท์ -->
           <div>
-            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+            <label for="access-phone" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
               {{ $t('access.phoneLabel') }} <span class="tw-text-red-500">*</span>
             </label>
             <input
+              id="access-phone"
               v-model="form.phone_number"
               type="tel"
               required
+              autocomplete="tel"
               maxlength="10"
               pattern="[0-9]{9,10}"
+              inputmode="numeric"
               :placeholder="$t('access.phonePlaceholder')"
+              @input="clearFieldError('phone_number')"
               class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
             />
+            <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.phone_number }}</p>
           </div>
-
-            <div>
-              <label for="access-phone" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                เบอร์โทรศัพท์ <span class="tw-text-red-500">*</span>
-              </label>
-              <input
-                id="access-phone"
-                v-model="form.phone_number"
-                type="tel"
-                autocomplete="tel"
-                maxlength="15"
-                placeholder="เช่น 0909009090"
-                inputmode="numeric"
-                @input="clearFieldError('phone_number')"
-              />
-              <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError?.phone_number }}</p>
-            </div>
 
             <!-- เลือกบทบาท (switch buttons) -->
           <div>
