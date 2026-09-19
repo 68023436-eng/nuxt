@@ -65,14 +65,14 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'ไม่พบเจ้าหน้าที่' })
     }
 
-    // ห้ามแก้ไขบัญชีตัวเอง
-    const isSelf = existing.full_name === adminSession.full_name && existing.role === adminSession.role
+    // ห้ามลบบัญชีตัวเอง
+    const target = existing as any
+    const isSelf = target?.full_name === adminSession?.full_name && target?.role === adminSession?.role
     if (isSelf) {
-      throw createError({ statusCode: 403, statusMessage: 'ไม่สามารถแก้ไขบัญชีของตัวเองได้' })
+      throw createError({ statusCode: 403, statusMessage: 'ไม่สามารถลบบัญชีของตัวเองได้' })
     }
-
     // กันชื่อซ้ำ (ถ้าชื่อ/role เปลี่ยนไป ต้องไม่ชนกับคนอื่น)
-    if (fullName !== existing.full_name || role !== existing.role) {
+    if (fullName !== target?.full_name || role !== target?.role) {
       const { data: dup, error: dupErr } = await client
         .from('hospital_user')
         .select('user_id')
@@ -93,9 +93,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // 1) อัปเดต auth user ถ้า email หรือ password เปลี่ยน
-    if (email && (email !== existing.email || password)) {
+    if (email && (email !== target?.email || password)) {
       const attrs: Record<string, any> = {}
-      if (email !== existing.email) attrs.email = email
+      if (email !== target?.email) attrs.email = email
       if (password) attrs.password = password
       const { error: authErr } = await serviceClient.auth.admin.updateUserById(id, attrs)
       if (authErr) {
@@ -116,7 +116,7 @@ export default defineEventHandler(async (event) => {
       is_active: isActive,
     }
 
-    const { data, error } = await client
+    const { data, error } = await (client.from('hospital_user') as any)
       .from('hospital_user')
       .update(updateData)
       .eq('user_id', id)

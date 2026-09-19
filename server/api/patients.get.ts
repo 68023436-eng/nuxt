@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถดึงข้อมูลบัญชีผู้ป่วยได้' })
     }
 
-    return (data || []).map((p) => ({
+    return ((data as any[]) || []).map((p) => ({
       user_id: p.user_id,
       full_name: p.full_name,
       phone_number: p.phone_number || null,

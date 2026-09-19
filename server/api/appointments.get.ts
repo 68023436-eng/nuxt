@@ -108,7 +108,7 @@ export default defineEventHandler(async (event) => {
         .eq('result', 'valid')
       if (usedRows && usedRows.length > 0) {
         for (const row of usedRows) {
-          const id = String(row?.appointment_id ?? '').trim()
+          const id = String((row as any)?.appointment_id ?? '').trim()
           if (id && id !== 'null') usedAppointmentIds.add(id)
         }
       }
@@ -122,15 +122,18 @@ export default defineEventHandler(async (event) => {
     const RETENTION_MS = retentionDays * 24 * 60 * 60 * 1000
 
     // แปลงผล embed ให้เป็นฟิลด์ตรงๆ ที่หน้าเว็บใช้ (department_name, building_name)
-    // พร้อมแนบ days_until_purge ตาม clock ของเซิร์ฟเวอร์ (หน้า history แสดง "เหลือ X วัน")
-    return (data || []).map((item: any) => {
-      const flat = {
-        ...item,
-        department_name: item.department?.dept_name_th || item.department?.[0]?.dept_name_th || null,
-        building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
-        department: undefined,
-        location: undefined,
-      }
+    // พร้อมกรองรายการที่ deleted_at เกิน 30 วันออก (ข้อมูลถูกลบถาวรแล้ว)
+    const filtered = (data || []).map((item: any) => ({
+      ...item,
+      department_name: item.department?.dept_name_th || item.department?.[0]?.dept_name_th || null,
+      building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
+      department: undefined,
+      location: undefined,
+    })).filter((item: any) => {
+      if (!item.deleted_at) return true
+      const deletedTime = new Date(item.deleted_at).getTime()
+      return now - deletedTime < RETENTION_MS
+    })
 
     // แนบเหลือวันที่จะถูกลบถาวร เพื่อให้หน้าเว็บแสดง "เหลือ X วัน"
     // และแนบ display_status (สถานะ 4 แบบคำนวณจากข้อมูลจริง)
@@ -139,10 +142,10 @@ export default defineEventHandler(async (event) => {
         const elapsed = now - new Date(item.deleted_at).getTime()
         item.days_until_purge = Math.max(0, Math.ceil((RETENTION_MS - elapsed) / (24 * 60 * 60 * 1000)))
       } else {
-        flat.days_until_purge = null
+        item.days_until_purge = null
       }
-
-      return flat
+      item.display_status = deriveAppointmentStatus(item, todayKey, usedAppointmentIds)
+      return item
     })
   } catch (err: any) {
     if (err.statusCode) throw err

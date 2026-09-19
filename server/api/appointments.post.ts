@@ -50,21 +50,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. ตรวจสอบเบอร์โทรศัพท์ (ถ้าส่งมา ต้องเป็นตัวเลข 9-10 หลัก)
-    //    คอลัมน์เป็น NOT NULL ใน DB — ถ้าไม่ระบุให้เก็บเป็น '' แทน null (กัน error 500)
-    let phoneNumber = ''
-    if (body.phone_number) {
-      const cleanPhone = normalizePhone(String(body.phone_number))
-      if (!PHONE_REGEX.test(cleanPhone)) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก',
-        })
-      }
-      phoneNumber = cleanPhone
-    }
-
-    // 4. ตรวจสอบทะเบียนรถ (ถ้าส่งมา ต้องไม่ยาวเกิน 20 ตัวอักษร)
+    // 3. ตรวจสอบทะเบียนรถ (ถ้าส่งมา ต้องไม่ยาวเกิน 20 ตัวอักษร)
     //    คอลัมน์เป็น NOT NULL ใน DB — ถ้าไม่ระบุให้เก็บเป็น '' แทน null
     let licensePlate = ''
     if (body.license_plate) {
@@ -77,17 +63,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 5. ตรวจสอบวันนัดหมาย (format YYYY-MM-DD)
-    const appointmentDate = String(body.appointment_date).trim()
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-    if (!dateRegex.test(appointmentDate)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'วันนัดหมายต้องอยู่ในรูปแบบ YYYY-MM-DD',
-      })
-    }
-
-    // 6. ตรวจสอบ time_slot (ต้องเป็นค่าที่กำหนด)
+    // 4. ตรวจสอบ time_slot (ต้องเป็นค่าที่กำหนด)
     const timeSlot = sanitizeString(String(body.time_slot))
     if (!(ALLOWED_TIME_SLOTS as readonly string[]).includes(timeSlot)) {
       throw createError({
@@ -131,28 +107,24 @@ export default defineEventHandler(async (event) => {
       .eq('user_id', patientUserId)
       .single()
 
-    if (patientErr || !patient) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'ไม่พบบัญชีผู้ป่วยที่เลือก กรุณาเลือกผู้ป่วยจากรายการที่มีบัญชี',
-      })
-    }
-    if (patient.role !== 'Patient') {
+    const p = patient as any
+
+    if (p?.role !== 'Patient'){
       throw createError({
         statusCode: 400,
         statusMessage: 'บัญชีที่เลือกไม่ใช่ผู้ป่วย (Patient)',
       })
     }
-    if (patient.is_active === false) {
+
+    if (p?.is_active === false){
       throw createError({
         statusCode: 400,
         statusMessage: 'บัญชีผู้ป่วยนี้ถูกปิดใช้งาน',
       })
     }
 
-    const patientName = sanitizeString(patient.full_name)
-    const phoneNumber = patient.phone_number ? normalizePhone(patient.phone_number) : null
-
+    const patientName = sanitizeString(p?.full_name)
+    const phoneNumber = p?.phone_number ? normalizePhone(p?.phone_number) : null
     // === สร้าง QR Token อัตโนมัติ (ใช้ crypto สำหรับความปลอดภัย) ===
     const qrToken = body.qr_token
       ? sanitizeString(String(body.qr_token))
