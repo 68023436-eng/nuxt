@@ -41,8 +41,8 @@ export default defineEventHandler(async (event) => {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw createError({ statusCode: 400, statusMessage: 'จำเป็นต้องมีอีเมลที่ถูกต้อง (ใช้เป็นบัญชีในระบบ)' })
     }
-    if (!password || password.length < 6) {
-      throw createError({ statusCode: 400, statusMessage: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' })
+    if (!password || password.length < 8) {
+      throw createError({ statusCode: 400, statusMessage: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' })
     }
 
     const client = await serverSupabaseClient(event)
@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
         phone_number: phoneNumber || null,
         email,
         is_active: isActive,
-      })
+      } as any)
       .select('user_id, full_name, role, phone_number, email, is_active')
       .single()
 

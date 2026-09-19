@@ -1,6 +1,7 @@
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { resolve } from 'node:path'
+import { defineNuxtModule } from '@nuxt/kit'
 
 /**
  * ป้องกันบั๊ก dev restart บน Windows (Nuxt + @nuxtjs/tailwindcss):
@@ -38,14 +39,35 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxtjs/supabase',
-    {
-      setup(nuxt) {
+    '@nuxtjs/i18n',
+    defineNuxtModule({
+      setup(_options, nuxt) {
         nuxt.hook('modules:done', () => {
           nuxt.options.css = dedupeCssEntries(nuxt.options.css || [])
         })
       },
-    },
+    }),
   ],
+
+  // ระบบเปลี่ยนภาษา (ไทย / English) สำหรับทุกหน้า
+  // strategy: no_prefix -> URL ไม่มี ภาษา prefix, สลับภาษาได้ทันทีด้วยปุ่ม
+  i18n: {
+    strategy: 'no_prefix',
+    defaultLocale: 'th',
+    langDir: 'locales',
+    locales: [
+      { code: 'th', language: 'th-TH', name: 'ไทย', flag: '🇹🇭', file: 'th.json' },
+      { code: 'en', language: 'en-US', name: 'English', flag: '🇬🇧', file: 'en.json' },
+    ],
+    // จำภาษาที่เลือกไว้ใน cookie (hc_locale) เพื่อกลับมาใช้ครั้งถัดไป
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'hc_locale',
+      cookieSecure: false,
+      redirectOn: 'no prefix',
+    },
+    vueI18n: 'i18n.config',
+  },
 
   supabase: {
     redirect: false,

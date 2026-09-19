@@ -1,3 +1,7 @@
+#.env
+```
+เนื่องจากตัว back-end ส่วนใหญ่ที่ใช้เรียกตัว supabase ได้เรียกผ่านตัว .env ตัวหลักๆส่วนใหญ่จึงไม่สามารถเรียกดูจาก github เต็มๆได้
+```
 # Nuxt Minimal Starter
 
 Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
@@ -32,24 +36,3 @@ Build the application for production:
 
 # yarn
 yarn build
-
-```
-
-Locally preview production build:
-
-```bash / cmd / powersell
-
-# yarn
-yarn preview
-
-```
-
-Run python file or libary
-
-```bash / cmd / powersell
-
-# py uvicron
-uvicorn main:app --reload --port 8000
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.

@@ -5,7 +5,12 @@
 import { RETENTION_DAYS } from '~/constants/appointments'
 
 export const useAppointment = () => {
-  /** สีของ badge ตามสถานะ (เฉพาะ 4 สถานะ — คำนวณจากข้อมูลจริงที่ server ส่งมา) */
+  const { t, locale } = useSafeI18n()
+
+  // แปลงรหัสภาษา (th/en) เป็น Intl locale ที่ใช้จัดรูปแบบวันที่
+  const intlLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'th-TH'))
+
+  /** สีของ badge ตามสถานะ */
   const statusClass = (status: string): string => {
     const classes: Record<string, string> = {
       // 4 สถานะหลัก
@@ -22,48 +27,33 @@ export const useAppointment = () => {
     return classes[status] || 'tw-bg-gray-100 tw-text-gray-700'
   }
 
-  /**
-   * แปลงข้อความสถานะเป็นภาษาไทย (รับ display_status ที่ server คำนวณจากข้อมูลจริง)
-   *
-   * 4 สถานะของการนัดหมายเท่านั้น:
-   *   has_right = มีสิทธิ
-   *   used      = ใช้สิทธิไปแล้ว
-   *   not_used  = ไม่ได้ใช้สิทธิ
-   *   no_right  = ไม่มีสิทธิ
-   */
+  /** แปลงข้อความสถานะตามภาษาที่เลือก (ไทย/อังกฤษ) */
   const statusLabel = (status: string): string => {
-    const labels: Record<string, string> = {
-      'has_right': 'มีสิทธิ',
-      'used': 'ใช้สิทธิไปแล้ว',
-      'not_used': 'ไม่ได้ใช้สิทธิ',
-      'no_right': 'ไม่มีสิทธิ',
-      // fallback สำหรับค่าเก่า
-      active: 'มีสิทธิ',
-      completed: 'ใช้สิทธิไปแล้ว',
-      cancelled: 'ไม่มีสิทธิ',
-      backup: 'ข้อมูล backup',
-    }
-    return labels[status] || status || '-'
+    if (!status) return '-'
+    const key = `status.${status}`
+    const label = t(key)
+    // ถ้ายังไม่มีคีย์แปลภาษา → ใช้สถานะเดิมจาก system
+    return label !== key ? label : status
   }
 
-  /** แปลงรูปแบบวันที่ เช่น "2026-09-05" → "5 กันยายน 2569" */
+  /** แปลงรูปแบบวันที่ เช่น "2026-09-05" → "5 กันยายน 2569" / "September 5, 2026" */
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return '-'
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) return dateStr
-    return date.toLocaleDateString('th-TH', {
+    return date.toLocaleDateString(intlLocale.value, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     })
   }
 
-  /** แปลงรูปแบบวันที่ + เวลา เช่น "5 ก.ย. 2569 14:30" */
+  /** แปลงรูปแบบวันที่ + เวลา เช่น "5 ก.ย. 2569 14:30" / "Sep 5, 2026, 2:30 PM" */
   const formatDateTime = (dateStr: string | null): string => {
     if (!dateStr || dateStr === '-') return '-'
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) return dateStr
-    return date.toLocaleString('th-TH', {
+    return date.toLocaleString(intlLocale.value, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -83,13 +73,13 @@ export const useAppointment = () => {
     return Math.max(0, Math.ceil(remaining / (24 * 60 * 60 * 1000)))
   }
 
-  /** ข้อความอธิบายวันเหลือก่อนลบถาวร */
+  /** ข้อความอธิบายวันเหลือก่อนลบถาวร (ตามภาษา) */
   const purgeNotice = (deletedAt: string | null, daysUntilPurgeFromServer?: number | null): string => {
     if (!deletedAt) return ''
     const days = daysUntilPurge(deletedAt, daysUntilPurgeFromServer)
     if (days === null) return ''
-    if (days <= 0) return 'ข้อมูลกำลังจะถูกลบออกจากระบบอัตโนมัติ'
-    return `ข้อมูลจะถูกลบออกจากระบบอัตโนมัติใน ${days} วัน`
+    if (days <= 0) return t('status.aboutToDelete')
+    return t('status.autoDeleteInDays', { days })
   }
 
   return {

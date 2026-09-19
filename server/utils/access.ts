@@ -22,6 +22,9 @@ export interface AccessSession {
   iat: number
 }
 
+// ความคลาดเคลื่อนของนาฬิกา (clock skew) ที่ยอมรับได้ +-5 นาที
+const IAT_SKEW_SECONDS = 5 * 60
+
 // สิทธิ์ตาม role กำหนดไว้ใน constants/roles.ts (ROLE_PERMISSIONS, ROLE_LABELS)
 
 const ALL_ROLES = Object.keys(ROLE_PERMISSIONS) as AccessRole[]
@@ -58,7 +61,7 @@ export function sealAccessSession(session: AccessSession): string {
   return `${body}.${sign(body)}`
 }
 
-export function unsealAccessSession(token: string | undefined | null): AccessSession | null {
+export function unsealAccessSession(token: string | undefined | null, maxAgeSeconds = ACCESS_COOKIE_MAX_AGE): AccessSession | null {
   if (!token) return null
   const parts = token.split('.')
   if (parts.length !== 2) return null
@@ -70,6 +73,17 @@ export function unsealAccessSession(token: string | undefined | null): AccessSes
   try {
     const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as AccessSession
     if (!parsed || typeof parsed.role !== 'string' || !isAccessRole(parsed.role)) return null
+
+    // validate iat เลขวินาที (epoch) — เหมือนเวลาที่ใช้ seal
+    if (typeof parsed.iat !== 'number' || !Number.isFinite(parsed.iat)) return null
+
+    const now = Math.floor(Date.now() / 1000)
+    // หมดอายุแล้วฝั่ง server (cookie maxAge ใช้บังคับที่ browser เท่านั้น —
+    // ต้องตรวจที่ server ด้วยเพื่อกันใช้ token ที่ขโมยมาเกินอายุจริง)
+    if (now - parsed.iat > maxAgeSeconds) return null
+    // iat ในอนาคตเกินกว่าความคลาดเคลื่อนของนาฬิกา → ไม่น่าเชื่อถือ
+    if (parsed.iat > now + IAT_SKEW_SECONDS) return null
+
     return parsed
   } catch {
     return null
@@ -127,7 +141,7 @@ export function requireAnyRole(event: any, roles: AccessRole[]): AccessSession {
 export function requirePermission(event: any, perm: AccessPermission): AccessSession {
   const session = requireSession(event)
   if (!hasPermission(session, perm)) {
-    let label = perm
+    let label: string = perm
     if (perm === 'create') label = 'การกรอกข้อมูล/สร้างใบนัด'
     else if (perm === 'cancel') label = 'การยกเลิกนัดหมาย'
     else if (perm === 'restore') label = 'การกู้คืนข้อมูล'

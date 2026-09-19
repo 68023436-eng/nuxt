@@ -3,7 +3,7 @@ import { RETENTION_DAYS } from '~/constants/appointments'
 
 /**
  * ลบข้อมูลที่อยู่ในประวัติครบกำหนด (retention days) ออกจากระบบถาวร
- * ใช้ร่วมกันระหว่าง /api/cleanup/purge (session-based) และ /api/cron/purge (secret-based)
+ * ใช้ร่วมกันระหว่าง /api/cleanup/purge (session-based) และ cron ภายนอก (ถ้ามี)
  */
 export async function purgeExpiredAppointments(event: any) {
   const client = await serverSupabaseClient(event)

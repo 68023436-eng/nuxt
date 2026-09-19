@@ -1,60 +1,63 @@
 <template>
   <div class="tw-min-h-screen tw-flex tw-items-center tw-justify-center tw-bg-gradient-to-br tw-from-emerald-500 tw-via-teal-500 tw-to-cyan-600 tw-p-4">
     <div class="tw-w-full tw-max-w-md">
+      <!-- Logo -->
+      
+
+      <!-- ปุ่มเลือกภาษา (มุมขวาบน) -->
+      <div class="tw-flex tw-justify-end tw-mb-2">
+        <div class="tw-bg-white/90 tw-backdrop-blur-sm tw-rounded-xl tw-shadow-md tw-p-1">
+          <LanguageSwitcher />
+        </div>
+      </div>
+
       <!-- Card -->
-      <div class="tw-bg-white tw-rounded-3xl tw-shadow-2xl tw-p-6 sm:tw-p-8">
+      <div class="tw-bg-white tw-rounded-3xl tw-shadow-2xl tw-p-8">
         <div class="tw-text-center tw-mb-6">
-          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">ระบบสิทธิ์เข้าถึง</h1>
-          <p class="tw-text-sm tw-text-slate-500 tw-mt-1">Hospital Appointment &amp; Parking Access</p>
-          <p class="tw-text-xs tw-text-slate-400 tw-mt-1">
-            ทุกบทบาท: ชื่อ + นามสกุล + เบอร์โทรศัพท์ (ไม่ใช้รหัสผ่าน/OTP)
-          </p>
+          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">{{ $t('access.title') }}</h1>
+          <p class="tw-text-sm tw-text-slate-500 tw-mt-1">{{ $t('access.subtitle') }}</p>
+          <p class="tw-text-xs tw-text-slate-400 tw-mt-1">{{ $t('access.desc') }}</p>
         </div>
 
-        <!-- Error banner -->
+        <!-- Error -->
         <div
           v-if="errorMsg"
-          role="alert"
           class="tw-mb-4 tw-bg-red-50 tw-border tw-border-red-200 tw-text-red-600 tw-text-sm tw-p-3 tw-rounded-lg"
         >
           {{ errorMsg }}
         </div>
 
-        <form @submit.prevent="handleLogin" novalidate class="tw-space-y-5">
-            <!-- ชื่อ / นามสกุล / เบอร์โทร (ทุก Role ใช้ช่องเดียวกัน แยกชื่อ-นามสกุล) -->
-            <div>
-              <label for="access-first-name" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                ชื่อ <span class="tw-text-red-500">*</span>
-              </label>
-              <input
-                id="access-first-name"
-                v-model="form.first_name"
-                type="text"
-                autocomplete="given-name"
-                maxlength="50"
-                placeholder="กรุณากรอกชื่อ"
-                :class="inputClass(fieldError.first_name)"
-                @input="clearFieldError('first_name')"
-              />
-              <p v-if="fieldError.first_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.first_name }}</p>
-            </div>
+        <form @submit.prevent="handleLogin" class="tw-space-y-5">
+          <!-- ชื่อผู้ใช้ -->
+          <div>
+            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+              {{ $t('access.usernameLabel') }} <span class="tw-text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.full_name"
+              type="text"
+              required
+              maxlength="100"
+              :placeholder="$t('access.usernamePlaceholder')"
+              class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
+            />
+          </div>
 
-            <div>
-              <label for="access-last-name" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-                นามสกุล <span class="tw-text-red-500">*</span>
-              </label>
-              <input
-                id="access-last-name"
-                v-model="form.last_name"
-                type="text"
-                autocomplete="family-name"
-                maxlength="50"
-                placeholder="กรุณากรอกนามสกุล"
-                :class="inputClass(fieldError.last_name)"
-                @input="clearFieldError('last_name')"
-              />
-              <p v-if="fieldError.last_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.last_name }}</p>
-            </div>
+          <!-- เบอร์โทรศัพท์ -->
+          <div>
+            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+              {{ $t('access.phoneLabel') }} <span class="tw-text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.phone_number"
+              type="tel"
+              required
+              maxlength="10"
+              pattern="[0-9]{9,10}"
+              :placeholder="$t('access.phonePlaceholder')"
+              class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
+            />
+          </div>
 
             <div>
               <label for="access-phone" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
@@ -77,22 +80,27 @@
             <!-- เลือกบทบาท (switch buttons) -->
           <div>
             <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
-              เลือกบทบาท <span class="tw-text-red-500">*</span>
+              {{ $t('access.roleLabel') }} <span class="tw-text-red-500">*</span>
             </label>
-            <div class="tw-grid tw-grid-cols-2 tw-gap-2.5" role="radiogroup" aria-label="เลือกบทบาท">
+            <div class="tw-grid tw-grid-cols-2 tw-gap-2.5" role="radiogroup" :aria-label="$t('access.roleLabel')">
               <button
                 v-for="opt in roleOptions"
                 :key="opt.value"
                 type="button"
                 role="radio"
                 :aria-checked="form.role === opt.value"
-                :class="roleButtonClass(opt.value, form.role === opt.value)"
-                @click="selectRole(opt.value)"
+                :class="[
+                  'tw-relative tw-rounded-xl tw-border tw-p-3 tw-text-left tw-transition-all tw-flex tw-flex-col tw-gap-1',
+                  form.role === opt.value
+                    ? `tw-bg-gradient-to-br ${ROLE_COLORS[opt.value]} tw-border-transparent tw-text-white tw-shadow-lg`
+                    : 'tw-bg-white tw-border-slate-200 tw-text-gray-700 hover:tw-border-emerald-300 hover:tw-bg-emerald-50/50',
+                ]"
+                @click="form.role = opt.value"
               >
                 <span v-if="form.role === opt.value" class="tw-absolute tw-top-2 tw-right-2 tw-text-white tw-text-xs">✓</span>
                 <span class="tw-text-lg">{{ ROLE_ICONS[opt.value] }}</span>
                 <span class="tw-font-semibold tw-text-sm">{{ opt.label }}</span>
-                <span :class="form.role === opt.value ? 'tw-text-white/85' : 'tw-text-slate-400'">
+                <span :class="['tw-text-xs', form.role === opt.value ? 'tw-text-white/85' : 'tw-text-slate-400']">
                   {{ opt.desc }}
                 </span>
               </button>
@@ -103,15 +111,14 @@
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="tw-w-full tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-semibold tw-py-3.5 tw-rounded-xl tw-shadow-lg tw-transition tw-mt-2 tw-flex tw-items-center tw-justify-center tw-gap-2"
+            class="tw-w-full tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-semibold tw-py-3.5 tw-rounded-xl tw-shadow-lg tw-transition tw-mt-2"
           >
-            <span v-if="isSubmitting" class="tw-inline-block tw-w-4 tw-h-4 tw-border-2 tw-border-white/60 tw-border-t-transparent tw-rounded-full tw-animate-spin"></span>
-            <span>{{ isSubmitting ? 'กำลังตรวจสอบสิทธิ์...' : 'เข้าสู่ระบบ' }}</span>
+            {{ isSubmitting ? $t('access.signingIn') : $t('access.signIn') }}
           </button>
         </form>
 
         <p class="tw-text-center tw-text-xs tw-text-slate-400 tw-mt-5">
-          ใช้ชื่อที่ตรงกับข้อมูลในระบบ โดยไม่ต้องใช้รหัสผ่าน
+          {{ $t('access.staffNote') }}
         </p>
       </div>
     </div>
@@ -125,12 +132,9 @@ definePageMeta({
   middleware: false,
 })
 
-const { session, login } = useSession()
-
-// ข้อมูล role สำหรับแสดงเป็น switch button
+const { login, refresh } = useSession()
 const roleOptions = useRoleOptions()
 
-// แบบฟอร์ม + สถานะ
 const form = reactive({
   first_name: '',
   last_name: '',
@@ -138,107 +142,28 @@ const form = reactive({
   role: 'Patient',
 })
 
-const fieldError = reactive({
-  first_name: '',
-  last_name: '',
-  phone_number: '',
-})
-
 const isSubmitting = ref(false)
 const errorMsg = ref('')
 
-// หน้าที่ให้ไปหลังเข้าสู่ระบบ (รปภ. ไปหน้า ตรวจสอบQR ไม่ใช่หน้ารายการนัด)
-const homeRoute = (role) => (role === 'Security_guard' ? '/verify' : '/appointments')
+// แต่ละบทบาทมีหน้าแรกของตัวเอง (รปภ. → ตรวจสอบ QR ส่วนที่เหลือ → หน้าหลัก)
+const homePathFor = (role) => (role === 'Security_guard' ? '/verify' : '/')
 
-// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าของแต่ละบทบาททันที
+// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าหลักของบทบาทนั้นทันที
 onMounted(async () => {
-  if (session.value) {
-    navigateTo(homeRoute(session.value.role))
+  const s = await refresh()
+  if (s) {
+    navigateTo(homePathFor(s.role))
   }
 })
 
-// ============================================================
-// Validation ฝั่ง client (กันส่งข้อมูลไม่ครบ/รูปแบบผิด)
-// ============================================================
-
-const clearFieldError = (field) => {
-  fieldError[field] = ''
-}
-
-const validate = () => {
-  let ok = true
-
-  const phone = form.phone_number.trim().replace(/[\s-]/g, '')
-  if (!phone) {
-    fieldError.phone_number = 'กรุณากรอกเบอร์โทรศัพท์'
-    ok = false
-  } else if (!/^\d{9,10}$/.test(phone)) {
-    fieldError.phone_number = 'เบอร์โทรต้องเป็นตัวเลข 9-10 หลักเท่านั้น'
-    ok = false
-  } else {
-    fieldError.phone_number = ''
-  }
-
-  // ทุก Role: ชื่อ + นามสกุล (+ เบอร์โทร + role ตาม Role) — validate ชื่อ/นามสกุลเหมือนกันทั้งหมด
-  fieldError.first_name = form.first_name.trim() ? '' : 'กรุณากรอกชื่อ'
-  if (fieldError.first_name) ok = false
-  fieldError.last_name = form.last_name.trim() ? '' : 'กรุณากรอกนามสกุล'
-  if (fieldError.last_name) ok = false
-
-  // role ต้องเป็นค่าในรายการที่อนุญาต (กันส่งค่าผิดเข้าไป)
-  if (!roleOptions.some(r => r.value === form.role)) {
-    form.role = 'Patient'
-  }
-
-  return ok
-}
-
-// ============================================================
-// Handlers
-// ============================================================
-
-const selectRole = (role) => {
-  form.role = role
-  errorMsg.value = ''
-}
-
-const inputClass = (hasError) => [
-  'tw-w-full tw-border tw-p-3 tw-rounded-xl tw-outline-none tw-transition-colors',
-  hasError
-    ? 'tw-border-red-400 focus:tw-ring-2 focus:tw-ring-red-300'
-    : 'tw-border-gray-300 focus:tw-ring-2 focus:tw-ring-emerald-400',
-]
-
-const roleButtonClass = (role, isActive) => [
-  'tw-relative tw-rounded-xl tw-border tw-p-3 tw-text-left tw-transition-all tw-flex tw-flex-col tw-gap-1',
-  isActive
-    ? `tw-bg-gradient-to-br ${ROLE_COLORS[role]} tw-border-transparent tw-text-white tw-shadow-lg`
-    : 'tw-bg-white tw-border-slate-200 tw-text-gray-700 hover:tw-border-emerald-300 hover:tw-bg-emerald-50/50',
-]
-
 const handleLogin = async () => {
   errorMsg.value = ''
-
-  // ตรวจข้อมูลก่อนส่งจริง
-  if (!validate()) return
-
   isSubmitting.value = true
   try {
-    // ส่งข้อมูลไปตรวจที่ Server (Server เป็นฝ่าย Normalize + ตรวจค่าทั้งหมดเป็นของ Account เดียวกัน)
-    const payload = {
-      first_name: form.first_name.trim(),
-      last_name: form.last_name.trim(),
-      phone_number: form.phone_number.trim(),
-      role: form.role,
-    }
-
-    await login(payload)
-    // ไปหน้าเริ่มต้นตามบทบาท (รปภ. จะไปหน้า ตรวจสอบQR)
-    if (useRoute().path === '/access') {
-      await navigateTo(homeRoute(form.role))
-    }
+    const s = await login({ ...form })
+    navigateTo(homePathFor(s?.role))
   } catch (error) {
-    errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่'
+    errorMsg.value = error?.data?.statusMessage || error?.message || $t('access.loginFailed')
   } finally {
     isSubmitting.value = false
   }

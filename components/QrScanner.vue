@@ -26,7 +26,7 @@ const decodedOnce = ref(false)
 let scanner: any = null
 
 const humanizeError = (err: unknown): string => {
-  const m = String(err?.message || err || '')
+  const m = err instanceof Error ? err.message : typeof err === 'string' ? err : ''
   if (m.includes('NotAllowedError') || m.includes('PermissionDenied') || m.includes('permission')) {
     return 'ถูกปฏิเสธการเข้าถึงกล้อง กรุณาอนุญาตให้เว็บไซต์ใช้กล้องในการตั้งค่าของเบราว์เซอร์'
   }
@@ -56,6 +56,7 @@ const startScanner = async () => {
   } catch {}
 
   scanner = new Html5Qrcode(CONTAINER_ID, {
+    verbose: false,
     experimentalFeatures: {
       useBarCodeDetectorIfSupported: true,
     },

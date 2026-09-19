@@ -33,6 +33,13 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'กรุณาใส่ค่า QR Token หรือเบอร์โทรศัพท์',
       })
     }
+    // จำกัดความยาว (QR Token จริงไม่เกิน ~34 ตัว, เบอร์ 10 ตัว) — กันส่งข้อมูลมหาศาล
+    if (rawValue.length > 64) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'ค่าที่ใช้ตรวจสอบยาวเกินไป',
+      })
+    }
 
     // ทำความสะอาดค่าที่ใช้ค้นหา
     let qrToken: string | null = null

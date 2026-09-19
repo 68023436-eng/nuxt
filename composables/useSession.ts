@@ -1,4 +1,4 @@
-import { ROLE_ORDER, ROLE_LABELS, ROLE_DESCRIPTIONS, ROLE_PERMISSIONS } from '~/constants/roles'
+import { ROLE_ORDER, ROLE_PERMISSIONS } from '~/constants/roles'
 import type { AccessRole, AccessPermission } from '~/constants/roles'
 
 /**
@@ -8,11 +8,14 @@ import type { AccessRole, AccessPermission } from '~/constants/roles'
 export const useSession = () => {
   const session = useState<any>('hc-session', () => null)
 
+  const { t } = useSafeI18n()
+
   const asAdmin = computed(() => session.value?.role === 'Admin')
 
   const role = computed<AccessRole | null>(() => session.value?.role || null)
 
-  const roleLabel = computed(() => (role.value ? (ROLE_LABELS[role.value] ?? role.value) : ''))
+  // ชื่อบทบาทตามภาษาที่เลือก (ไทย/อังกฤษ) — fallback เป็นตัว role เดิม
+  const roleLabel = computed(() => (role.value ? (t(`roles.${role.value}`) !== `roles.${role.value}` ? t(`roles.${role.value}`) : role.value) : ''))
 
   const permissions = computed<AccessPermission[]>(() => session.value?.permissions || [])
 
@@ -70,9 +73,10 @@ export const useSession = () => {
 }
 
 export const useRoleOptions = () => {
+  const { t } = useSafeI18n()
   return ROLE_ORDER.map((r) => ({
     value: r,
-    label: ROLE_LABELS[r],
-    desc: ROLE_DESCRIPTIONS[r],
+    label: t(`roles.${r}`),
+    desc: t(`roles.descriptions.${r}`),
   }))
 }

@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // อัปเดตสถานะเป็น 'backup' (ข้อมูล backup) และล้าง deleted_at ออก เพื่อไม่ให้ถูกนับว่าถูกลบ
-    const { data: updated, error: updateError } = await client
+    const { data: updated, error: updateError } = await (client as any)
       .from('appointments')
       .update({ status: 'backup', deleted_at: null })
       .eq('appointment_id', numericId)

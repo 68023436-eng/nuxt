@@ -4,19 +4,10 @@ import { collapseSpaces, composeFullName, normalizeNameForMatch, normalizeNameFo
 
 /**
  * POST /api/session
- * "Login" — ไม่ใช้ Password / ไม่ใช้ OTP (Req: ไม่สร้างระบบ Password)
- * - ทุก Role (Patient / Admin / Clinic_staff / Security_guard): ระบุตัวตนด้วย
- *   ชื่อ (first_name) + นามสกุล (last_name) + ข้อมูล Login อื่นตาม Role
- *   - Patient: ชื่อ + นามสกุล + เบอร์โทรศัพท์
- *   - เจ้าหน้าที่ (Admin/Clinic_staff/Security_guard): ชื่อ + นามสกุล + เบอร์โทร + role
- *     (ต้องตรงกับแถวใน hospital_user ตามระบบเดิม)
- *
- * หมายเหตุการรักษาความปลอดภัย:
- * - ตรวจสอบที่ Server เสมอ (ไม่ได้ส่งรายชื่อผู้ป่วยทั้งหมดไปให้ Client)
- * - ชื่อ/นามสกุล/เบอร์ ไม่ตรงกับ Account ใด → คืน 401 "ไม่มีบัญชีผู้ใช้นี้"
- *   ไม่สร้าง session/token ไม่ redirect (อยู่หน้าเดิม)
- * - ไม่ Trust role/ชื่อ/เบอร์ จาก client — lookup กับ DB เสมอ
- * - ชื่อ + นามสกุล + เบอร์ ต้องมาจาก Account เดียวกันเท่านั้น
+ * "Login" แบบไม่ใช้รหัสผ่าน — ระบุตัวตนด้วย ชื่อ + เบอร์โทร + role (switch button)
+ * - เจ้าหน้าที่ (Admin/Clinic_staff/Security_guard): ชื่อ + เบอร์โทร + role ต้องตรงกับแถวใน hospital_user
+ * - Patient: ผู้ป่วยทั่วไป เลือกได้อิสระ (ไม่ต้องมีใน hospital_user)
+ * หมายเหตุ: ชื่อจะถูก normalize (trim + ลบช่องว่างซ้อน) ก่อนเก็บใน session
  */
 export default defineEventHandler(async (event) => {
   try {
@@ -111,7 +102,7 @@ export default defineEventHandler(async (event) => {
       const client = await serverSupabaseClient(event)
       const { data: users, error: userErr } = await client
         .from('hospital_user')
-        .select('user_id, full_name, role')
+        .select('full_name, role, phone_number')
         .eq('role', role)
         .or('is_active.is.null,is_active.eq.true')
 
@@ -131,18 +122,30 @@ export default defineEventHandler(async (event) => {
       if (!matched) {
         throw createError({
           statusCode: 401,
-          statusMessage: 'ไม่พบผู้ใช้ "ชื่อ + บทบาท" นี้ในระบบ กรุณาตรวจสอบชื่อหรือเลือกบทบาทใหม่',
+          statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ หรือเลือกบทบาทเจ้าหน้าที่ผิดพลาด',
         })
       }
 
-      matchedUserId = matched.user_id
-      session = {
-        full_name: fullName,
-        phone_number: phoneNumber,
-        role,
-        user_id: matchedUserId,
-        iat: Math.floor(Date.now() / 1000),
+      // ตรวจเบอร์โทร: ชื่อและเบอร์ต้องตรงกับข้อมูลในระบบ (ถ้าในระบบมีเบอร์)
+      const storedPhone = typeof (matched as any)?.phone_number === 'string'
+        ? (matched as any).phone_number.replace(/[\s-]/g, '')
+        : ''
+
+      const inputPhone = (phoneNumber || '').replace(/[\s-]/g, '') // ดึงตัวแปรนี้กลับมา
+
+      if (!storedPhone || storedPhone !== inputPhone) {
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ หรือเลือกบทบาทเจ้าหน้าที่ผิดพลาด',
+        })
       }
+    }
+    // 3. สร้าง session และเซ็นต์ลง cookie
+    const session: AccessSession = {
+      full_name: fullName,
+      phone_number: phoneNumber,
+      role,
+      iat: Math.floor(Date.now() / 1000),
     }
 
     // 2. เซ็นต์ session ลง cookie

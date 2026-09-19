@@ -3,24 +3,32 @@
  * MapsDirectionsButton
  * ปุ่มเปิด Google Maps นำทางไปยังจุดหมาย (จุดจอดรถ / อาคารคลินิก)
  * ใช้ target="_blank" เปิดในแท็บใหม่ (รองรับมือถือ: เปิดแอป Google Maps)
+ *
+ * รองรับการนำทาง 2 แบบ:
+ *   1. พิกัด (coord: { lat, lng }) — แม่นยำที่สุด
+ *   2. ข้อความ (destination) — fallback เมื่อไม่มีพิกัด
  */
-import { buildGoogleMapsDirectionsUrl } from '~/constants/clinic'
+import { buildGoogleMapsDirectionsUrl, type GeoCoord } from '~/constants/clinic'
 
 const props = withDefaults(
   defineProps<{
-    /** ข้อความปลายทาง (เช่น ชื่ออาคารจอดรถ) */
-    destination: string
+    /** ข้อความปลายทาง (เช่น ชื่ออาคารจอดรถ) — fallback เมื่อไม่มี coord */
+    destination?: string
+    /** พิกัดจุดหมาย { lat, lng } — ถ้ามีจะใช้ค่านี้นำทาง (แม่นกว่าข้อความ) */
+    coord?: GeoCoord | null
     /** ข้อความบนปุ่ม */
     label: string
     /** ไอคอน (emoji) แสดงนำหน้าข้อความ */
     icon?: string
   }>(),
   {
+    destination: '',
+    coord: null,
     icon: '📍',
   },
 )
 
-const mapsUrl = computed(() => buildGoogleMapsDirectionsUrl(props.destination))
+const mapsUrl = computed(() => buildGoogleMapsDirectionsUrl(props.destination, props.coord))
 </script>
 
 <template>
