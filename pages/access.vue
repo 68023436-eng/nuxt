@@ -1,36 +1,38 @@
 <template>
-  <div class="tw-min-h-screen tw-flex tw-items-center tw-justify-center tw-bg-gradient-to-br tw-from-emerald-500 tw-via-teal-500 tw-to-cyan-600 tw-p-4">
-    <div class="tw-w-full tw-max-w-md">
-      <!-- Logo -->
+  <div class="tw-min-h-[100dvh] tw-w-full tw-flex tw-flex-col tw-items-center tw-justify-center tw-bg-gradient-to-br tw-from-emerald-500 tw-via-teal-500 tw-to-cyan-600 tw-p-4 sm:tw-p-6 md:tw-p-8 tw-py-8 sm:tw-py-12">
+    
+    <div class="tw-w-full tw-max-w-md sm:tw-max-w-lg">
       
-
-      <!-- ปุ่มเลือกภาษา (มุมขวาบน) -->
-      <div class="tw-flex tw-justify-end tw-mb-2">
+      <!-- แถบด้านบน: ปุ่มเลือกภาษา -->
+      <div class="tw-flex tw-justify-end tw-mb-3 sm:tw-mb-4">
         <div class="tw-bg-white/90 tw-backdrop-blur-sm tw-rounded-xl tw-shadow-md tw-p-1">
           <LanguageSwitcher />
         </div>
       </div>
 
-      <!-- Card -->
-      <div class="tw-bg-white tw-rounded-3xl tw-shadow-2xl tw-p-8">
-        <div class="tw-text-center tw-mb-6">
-          <h1 class="tw-text-2xl tw-font-bold tw-text-gray-800">{{ $t('access.title') }}</h1>
-          <p class="tw-text-sm tw-text-slate-500 tw-mt-1">{{ $t('access.subtitle') }}</p>
-          <p class="tw-text-xs tw-text-slate-400 tw-mt-1">{{ $t('access.desc') }}</p>
+      <!-- กล่องการ์ดเข้าสู่ระบบ (Card) -->
+      <div class="tw-bg-white tw-rounded-2xl sm:tw-rounded-3xl tw-shadow-2xl tw-p-5 sm:tw-p-8 md:tw-p-10 tw-border tw-border-white/20">
+        
+        <!-- Header ข้อความต้อนรับ -->
+        <div class="tw-text-center tw-mb-5 sm:tw-mb-6">
+          <h1 class="tw-text-xl sm:tw-text-2xl md:tw-text-3xl tw-font-bold tw-text-gray-800">{{ $t('access.title') }}</h1>
+          <p class="tw-text-xs sm:tw-text-sm tw-text-slate-500 tw-mt-1">{{ $t('access.subtitle') }}</p>
+          <p class="tw-text-[11px] sm:tw-text-xs tw-text-slate-400 tw-mt-1">{{ $t('access.desc') }}</p>
         </div>
 
-        <!-- Error -->
+        <!-- กล่องแจ้งเตือนข้อผิดพลาดรวม -->
         <div
           v-if="errorMsg"
-          class="tw-mb-4 tw-bg-red-50 tw-border tw-border-red-200 tw-text-red-600 tw-text-sm tw-p-3 tw-rounded-lg"
+          class="tw-mb-4 tw-bg-red-50 tw-border tw-border-red-200 tw-text-red-600 tw-text-xs sm:tw-text-sm tw-p-3 sm:tw-p-3.5 tw-rounded-xl"
         >
           {{ errorMsg }}
         </div>
 
-        <form @submit.prevent="handleLogin" class="tw-space-y-5">
-          <!-- ชื่อผู้ใช้ -->
+        <form @submit.prevent="handleLogin" class="tw-space-y-4 sm:tw-space-y-5">
+          
+          <!-- ช่องกรอก: ชื่อ-นามสกุล -->
           <div>
-            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+            <label class="tw-block tw-text-xs sm:tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-1.5">
               {{ $t('access.usernameLabel') }} <span class="tw-text-red-500">*</span>
             </label>
             <input
@@ -41,14 +43,17 @@
               :placeholder="$t('access.usernamePlaceholder')"
               autocomplete="name"
               @input="clearFieldError('full_name')"
-              class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
+              :class="[
+                'tw-w-full tw-border tw-p-2.5 sm:tw-p-3 tw-text-sm tw-rounded-xl tw-outline-none focus:tw-ring-2 tw-bg-white tw-transition-colors',
+                fieldError.full_name ? 'tw-border-red-400 focus:tw-ring-red-400' : 'tw-border-slate-300 focus:tw-ring-emerald-400'
+              ]"
             />
             <p v-if="fieldError.full_name" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.full_name }}</p>
           </div>
 
-          <!-- เบอร์โทรศัพท์ -->
+          <!-- ช่องกรอก: เบอร์โทรศัพท์ -->
           <div>
-            <label for="access-phone" class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+            <label for="access-phone" class="tw-block tw-text-xs sm:tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-1.5">
               {{ $t('access.phoneLabel') }} <span class="tw-text-red-500">*</span>
             </label>
             <input
@@ -62,17 +67,20 @@
               inputmode="numeric"
               :placeholder="$t('access.phonePlaceholder')"
               @input="clearFieldError('phone_number')"
-              class="tw-w-full tw-border tw-border-gray-300 tw-p-3 tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
+              :class="[
+                'tw-w-full tw-border tw-p-2.5 sm:tw-p-3 tw-text-sm tw-rounded-xl tw-outline-none focus:tw-ring-2 tw-bg-white tw-transition-colors',
+                fieldError.phone_number ? 'tw-border-red-400 focus:tw-ring-red-400' : 'tw-border-slate-300 focus:tw-ring-emerald-400'
+              ]"
             />
             <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.phone_number }}</p>
           </div>
 
-            <!-- เลือกบทบาท (switch buttons) -->
+          <!-- ปุ่มเลือกบทบาท (Role Selector) -->
           <div>
-            <label class="tw-block tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-2">
+            <label class="tw-block tw-text-xs sm:tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-1.5">
               {{ $t('access.roleLabel') }} <span class="tw-text-red-500">*</span>
             </label>
-            <div class="tw-grid tw-grid-cols-2 tw-gap-2.5" role="radiogroup" :aria-label="$t('access.roleLabel')">
+            <div class="tw-grid tw-grid-cols-2 tw-gap-2 sm:tw-gap-2.5" role="radiogroup" :aria-label="$t('access.roleLabel')">
               <button
                 v-for="opt in roleOptions"
                 :key="opt.value"
@@ -80,36 +88,37 @@
                 role="radio"
                 :aria-checked="form.role === opt.value"
                 :class="[
-                  'tw-relative tw-rounded-xl tw-border tw-p-3 tw-text-left tw-transition-all tw-flex tw-flex-col tw-gap-1',
+                  'tw-relative tw-rounded-xl tw-border tw-p-2.5 sm:tw-p-3 tw-text-left tw-transition-all tw-flex tw-flex-col tw-gap-1',
                   form.role === opt.value
-                    ? `tw-bg-gradient-to-br ${ROLE_COLORS[opt.value]} tw-border-transparent tw-text-white tw-shadow-lg`
-                    : 'tw-bg-white tw-border-slate-200 tw-text-gray-700 hover:tw-border-emerald-300 hover:tw-bg-emerald-50/50',
+                    ? `tw-bg-gradient-to-br ${ROLE_COLORS[opt.value]} tw-border-transparent tw-text-white tw-shadow-md`
+                    : 'tw-bg-white tw-border-slate-200 tw-text-gray-700 hover:tw-border-emerald-300 hover:tw-bg-emerald-50/40',
                 ]"
                 @click="form.role = opt.value"
               >
                 <span v-if="form.role === opt.value" class="tw-absolute tw-top-2 tw-right-2 tw-text-white tw-text-xs">✓</span>
-                <span class="tw-text-lg">{{ ROLE_ICONS[opt.value] }}</span>
-                <span class="tw-font-semibold tw-text-sm">{{ opt.label }}</span>
-                <span :class="['tw-text-xs', form.role === opt.value ? 'tw-text-white/85' : 'tw-text-slate-400']">
+                <span class="tw-text-base sm:tw-text-lg">{{ ROLE_ICONS[opt.value] }}</span>
+                <span class="tw-font-semibold tw-text-xs sm:tw-text-sm tw-leading-tight">{{ opt.label }}</span>
+                <span :class="['tw-text-[10px] sm:tw-text-xs tw-line-clamp-1', form.role === opt.value ? 'tw-text-white/90' : 'tw-text-slate-400']">
                   {{ opt.desc }}
                 </span>
               </button>
             </div>
           </div>
 
-          <!-- Submit -->
+          <!-- ปุ่มกดยืนยัน (Submit Button) -->
           <button
             type="submit"
             :disabled="isSubmitting"
-            class="tw-w-full tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-semibold tw-py-3.5 tw-rounded-xl tw-shadow-lg tw-transition tw-mt-2"
+            class="tw-w-full tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-semibold tw-py-3 sm:tw-py-3.5 tw-rounded-xl tw-shadow-md hover:tw-shadow-lg tw-transition-all tw-text-sm sm:tw-text-base tw-mt-2"
           >
-            {{ isSubmitting ? $t('access.signingIn') : $t('access.signIn') }}
+            {{ isSubmitting ? $t('access.signingIn') :$t('access.signIn') }}
           </button>
         </form>
 
-        <p class="tw-text-center tw-text-xs tw-text-slate-400 tw-mt-5">
+        <p class="tw-text-center tw-text-[11px] sm:tw-text-xs tw-text-slate-400 tw-mt-4 sm:tw-mt-5">
           {{ $t('access.staffNote') }}
         </p>
+
       </div>
     </div>
   </div>
@@ -126,8 +135,7 @@ const { login, refresh } = useSession()
 const roleOptions = useRoleOptions()
 
 const form = reactive({
-  first_name: '',
-  last_name: '',
+  full_name: '',
   phone_number: '',
   role: 'Patient',
 })
@@ -136,13 +144,17 @@ const isSubmitting = ref(false)
 const errorMsg = ref('')
 const fieldError = ref({})
 
-const inputClass = (hasError) => {
-return hasError ? 'border-red-500' : ''
+// เคลียร์ error เฉพาะฟิลด์ที่กำลังกรอก
+const clearFieldError = (field) => {
+  if (fieldError.value[field]) {
+    delete fieldError.value[field]
+  }
 }
-// แต่ละบทบาทมีหน้าแรกของตัวเอง (รปภ. → ตรวจสอบ QR ส่วนที่เหลือ → หน้าหลัก)
+
+// นำทางตามบทบาท (รปภ. ไปหน้า verify / ส่วนที่เหลือไปหน้าหลัก)
 const homePathFor = (role) => (role === 'Security_guard' ? '/verify' : '/')
 
-// ถ้ามี session อยู่แล้ว (เช่นกลับมาที่หน้า access) ข้ามไปหน้าหลักของบทบาทนั้นทันที
+// มี Session ค้างอยู่ ให้พาไปหน้าหลักทันที
 onMounted(async () => {
   const s = await refresh()
   if (s) {
@@ -151,15 +163,17 @@ onMounted(async () => {
 })
 
 const handleLogin = async () => {
-    errorMsg.value = ''
-    isSubmitting.value = true
-    try {
-      const s = await login({ ...form })
-      navigateTo(homePathFor(s?.role))
-    } catch (error) {
-      errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ'
-    } finally {
-      isSubmitting.value = false
-    }
+  errorMsg.value = ''
+  fieldError.value = {}
+  isSubmitting.value = true
+
+  try {
+    const s = await login({ ...form })
+    navigateTo(homePathFor(s?.role))
+  } catch (error) {
+    errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ'
+  } finally {
+    isSubmitting.value = false
   }
+}
 </script>

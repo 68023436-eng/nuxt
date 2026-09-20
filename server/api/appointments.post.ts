@@ -146,7 +146,7 @@ export default defineEventHandler(async (event) => {
 
     const { data, error } = await client
     .from('appointments')
-    .insert([insertData] as any) // ใส่ as any ตรงนี้ เส้นแดงหายทันที
+    .insert([insertData] as any)
     .select('appointment_id, qr_token, patient_name, appointment_date, time_slot, status, created_at, dept_id')
 
     if (error) {
