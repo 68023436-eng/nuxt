@@ -2,7 +2,7 @@
   <div
     role="group"
     :aria-label="$t('languageSwitcher.label')"
-    class="tw-inline-flex tw-items-center tw-gap-1 tw-p-1 tw-rounded-lg tw-bg-slate-100 tw-border tw-border-slate-200"
+    class="tw-inline-flex tw-items-center tw-gap-1 tw-p-1 tw-rounded-xl tw-bg-slate-100/90 tw-border tw-border-slate-200/80 tw-shadow-inner tw-select-none"
   >
     <button
       v-for="l in locales"
@@ -10,14 +10,15 @@
       type="button"
       :aria-pressed="isActive(l.code)"
       @click="switchTo(l.code)"
-      class="tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs tw-font-medium tw-transition-colors focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400"
-      :class="
+      :class="[
+        'tw-inline-flex tw-items-center tw-justify-center tw-px-3 sm:tw-px-2.5 tw-py-1.5 sm:tw-py-1 tw-rounded-lg tw-text-xs tw-font-semibold tw-transition-all tw-duration-150 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400 active:tw-scale-95',
         isActive(l.code)
           ? 'tw-bg-emerald-600 tw-text-white tw-shadow-sm'
-          : 'tw-text-gray-600 hover:tw-bg-white hover:tw-text-gray-900'
-      "
+          : 'tw-text-slate-600 hover:tw-bg-white hover:tw-text-slate-900'
+      ]"
     >
-      <span aria-hidden="true" class="tw-mr-1">{{ l.flag }}</span>{{ l.name }}
+      <span aria-hidden="true" class="tw-mr-1.5 sm:tw-mr-1 tw-text-sm sm:tw-text-xs">{{ l.flag }}</span>
+      <span>{{ l.name }}</span>
     </button>
   </div>
 </template>

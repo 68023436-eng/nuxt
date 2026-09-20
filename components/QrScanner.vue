@@ -47,7 +47,7 @@ const startScanner = async () => {
   errorMsg.value = ''
   decodedOnce.value = false
 
-  const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode')
+  const { Html5Qrcode } = await import('html5-qrcode')
   try {
     if (scanner) {
       await scanner.stop().catch(() => {})
@@ -62,19 +62,32 @@ const startScanner = async () => {
     },
   })
 
+  // คำนวณขนาดกรอบเล็งให้ยืดหยุ่นตามความกว้างของหน้าจอ
+  const qrBoxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
+    const minEdge = Math.min(viewfinderWidth, viewfinderHeight)
+    const edgeSize = Math.floor(minEdge * 0.72)
+    return {
+      width: Math.max(edgeSize, 180),
+      height: Math.max(edgeSize, 180),
+    }
+  }
+
   try {
     await scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 220, height: 220 } },
+      { 
+        fps: 10, 
+        qrbox: qrBoxFunction,
+        aspectRatio: 1.0,
+      },
       (decodedText: string) => {
-        // ป้องกันสแกน QR เดิมซ้ำ (decode เดียวกันออกมาหลายครั้ง)
         if (decodedOnce.value || !decodedText?.trim()) return
         decodedOnce.value = true
         stopScanner()
         emit('decoded', decodedText.trim())
       },
       () => {
-        // onError (frame decode error) — ignore, ปล่อยให้กล้องทำงานต่อ
+        // frame decode error (ปล่อยผ่านให้กล้องรันต่อ)
       },
     )
     status.value = 'scanning'
@@ -105,9 +118,6 @@ const submitManual = () => {
   emit('decoded', val)
 }
 
-// ขึ้นอยู่กับ modal เปิด/ปิดจริงๆ (ไม่ใช้ onMounted อย่างเดียว)
-// เพราะ QrScanner ถูก mount ตั้งแต่แรกแล้ว (ในตัว modal ใช้ v-if="open")
-// และเมื่อปิด modal ต้องแจ้งกล้องหยุดถ่าย (กันกล้องยังทำงานค้างอยู่)
 watch(
   () => props.open,
   (val) => {
@@ -129,97 +139,125 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="open" class="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-p-4">
-        <!-- Backdrop -->
-        <div class="tw-fixed tw-inset-0 tw-bg-black/60 tw-backdrop-blur-sm" @click="close"></div>
+      <div v-if="open" class="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-p-3 sm:tw-p-4">
+        <!-- ฉากหลังสีดำโปร่งแสง -->
+        <div class="tw-fixed tw-inset-0 tw-bg-black/70 tw-backdrop-blur-sm" @click="close"></div>
 
-        <!-- Camera Panel -->
-        <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-md tw-overflow-hidden tw-transform tw-transition-all">
-          <!-- Header -->
-          <div class="tw-bg-gradient-to-r tw-from-sky-500 tw-to-blue-600 tw-px-5 tw-py-4">
-            <div class="tw-flex tw-items-center tw-justify-between">
-              <h2 class="tw-text-lg tw-font-bold tw-text-white">📷 สแกน QR Code</h2>
-              <button
-                @click="close"
-                class="tw-text-white/80 hover:tw-text-white tw-transition-colors tw-text-2xl tw-leading-none tw-font-light"
-                aria-label="ปิด"
-              >
-                ✕
-              </button>
-            </div>
+        <!-- กล่องหน้าต่าง Modal กล้อง -->
+        <div class="tw-relative tw-bg-white tw-rounded-2xl sm:tw-rounded-3xl tw-shadow-2xl tw-w-full tw-max-w-sm sm:tw-max-w-md tw-max-h-[92vh] tw-flex tw-flex-col tw-overflow-hidden tw-transform tw-transition-all">
+          
+          <!-- ส่วนหัว Header -->
+          <div class="tw-bg-gradient-to-r tw-from-sky-500 tw-to-blue-600 tw-px-4 sm:tw-px-6 tw-py-3.5 sm:tw-py-4 tw-flex tw-items-center tw-justify-between">
+            <h2 class="tw-text-base sm:tw-text-lg tw-font-bold tw-text-white tw-flex tw-items-center tw-gap-2">
+              <span>📷</span> สแกน QR Code
+            </h2>
+            <button
+              @click="close"
+              class="tw-w-8 tw-h-8 tw-flex tw-items-center tw-justify-center tw-rounded-full tw-text-white/80 hover:tw-text-white hover:tw-bg-white/10 tw-transition-colors tw-text-xl tw-leading-none"
+              aria-label="ปิด"
+            >
+              ✕
+            </button>
           </div>
 
-          <div class="tw-p-5 tw-space-y-4">
-            <!-- พื้นที่กล้อง / สถานะ -->
-            <div class="tw-relative tw-bg-slate-900 tw-rounded-xl tw-overflow-hidden">
-              <!-- container สำหรับ html5-qrcode -->
+          <!-- เนื้อหา Body (เลื่อนได้ถ้าจอเตี้ย) -->
+          <div class="tw-p-4 sm:tw-p-5 tw-space-y-3.5 sm:tw-space-y-4 tw-overflow-y-auto tw-flex-1 tw-min-h-0">
+            
+            <!-- กรอบแสดงภาพจากกล้อง -->
+            <div class="tw-relative tw-bg-slate-900 tw-rounded-xl sm:tw-rounded-2xl tw-overflow-hidden tw-border tw-border-slate-800">
+              
+              <!-- Container สำหรับ html5-qrcode -->
               <div
                 :id="CONTAINER_ID"
-                class="tw-min-h-72 tw-flex tw-items-center tw-justify-center"
+                class="tw-w-full tw-min-h-[260px] sm:tw-min-h-[290px] tw-flex tw-items-center tw-justify-center"
               ></div>
 
-              <!-- Loading -->
-              <div v-if="status === 'starting'" class="tw-absolute inset-0 tw-flex tw-flex-col tw-items-center tw-justify-center tw-gap-2 tw-text-white">
-                <div class="tw-w-10 tw-h-10 tw-border-4 tw-border-white/30 tw-border-t-white tw-rounded-full tw-animate-spin"></div>
-                <p class="tw-text-sm tw-text-white/80">กำลังเปิดกล้อง...</p>
+              <!-- ข้อความแสดงสถานะกำลังเปิดกล้อง -->
+              <div v-if="status === 'starting'" class="tw-absolute tw-inset-0 tw-flex tw-flex-col tw-items-center tw-justify-center tw-gap-2.5 tw-bg-slate-900 tw-text-white tw-z-10">
+                <div class="tw-w-9 sm:tw-w-10 tw-h-9 sm:tw-h-10 tw-border-4 tw-border-white/20 tw-border-t-sky-400 tw-rounded-full tw-animate-spin"></div>
+                <p class="tw-text-xs sm:tw-text-sm tw-text-white/80 tw-font-medium">กำลังเปิดกล้อง...</p>
               </div>
             </div>
 
-            <!-- คำแนะนำ -->
-            <p class="tw-text-center tw-text-sm tw-text-slate-500">
-              วาง QR Code ให้อยู่ในกรอบสแกนด้านบน
+            <!-- ข้อความแนะนำ -->
+            <p class="tw-text-center tw-text-xs sm:tw-text-sm tw-text-slate-500">
+              หันกล้องไปที่ QR Code ให้พอดีกับกรอบสแกน
             </p>
 
-            <!-- กรณีเปิดกล้องไม่ได้ -->
-            <div v-if="status === 'error'" class="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-xl tw-p-4 tw-space-y-3">
-              <p class="tw-text-red-600 tw-text-sm tw-font-medium">⚠️ {{ errorMsg }}</p>
+            <!-- กรณีกล้องมีปัญหา หรือเปิดไม่ได้ -->
+            <div v-if="status === 'error'" class="tw-bg-red-50 tw-border tw-border-red-200 tw-rounded-xl tw-p-3.5 sm:tw-p-4 tw-space-y-3">
+              <p class="tw-text-red-600 tw-text-xs sm:tw-text-sm tw-font-medium leading-relaxed">
+                ⚠️ {{ errorMsg }}
+              </p>
 
-              <div class="tw-flex tw-flex-wrap tw-gap-2">
+              <div class="tw-flex tw-flex-col sm:tw-flex-row tw-gap-2">
                 <button
                   @click="startScanner"
-                  class="tw-bg-red-600 hover:tw-bg-red-700 tw-text-white tw-text-sm tw-font-medium tw-px-4 tw-py-2 tw-rounded-lg tw-transition-colors"
+                  type="button"
+                  class="tw-w-full sm:tw-flex-1 tw-bg-red-600 hover:tw-bg-red-700 tw-text-white tw-text-xs sm:tw-text-sm tw-font-semibold tw-py-2.5 tw-px-4 tw-rounded-xl tw-transition-colors"
                 >
                   ลองใหม่อีกครั้ง
                 </button>
                 <button
                   @click="manualMode = !manualMode"
-                  class="tw-bg-slate-200 hover:tw-bg-slate-300 tw-text-gray-700 tw-text-sm tw-font-medium tw-px-4 tw-py-2 tw-rounded-lg tw-transition-colors"
+                  type="button"
+                  class="tw-w-full sm:tw-flex-1 tw-bg-slate-200 hover:tw-bg-slate-300 tw-text-gray-700 tw-text-xs sm:tw-text-sm tw-font-medium tw-py-2.5 tw-px-4 tw-rounded-xl tw-transition-colors"
                 >
-                  {{ manualMode ? 'ซ่อนการกรอกด้วยมือ' : 'กรอก QR Token เอง' }}
+                  {{ manualMode ? 'ซ่อนกรอกด้วยมือ' : 'กรอก QR Token เอง' }}
                 </button>
               </div>
 
-              <!-- สำรอง: กรอก token ด้วยมือ -->
-              <div v-if="manualMode" class="tw-space-y-2">
+              <!-- ช่องสำรองกรอกด้วยมือ -->
+              <div v-if="manualMode" class="tw-space-y-2 tw-pt-1">
                 <input
                   v-model="manualValue"
                   type="text"
-                  placeholder="QR-XXXXXXXXXXXX..."
-                  class="tw-w-full tw-px-3 tw-py-2 tw-rounded-lg tw-border tw-border-slate-300 tw-text-sm focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-sky-400"
+                  placeholder="วางหรือพิมพ์ QR-Token ที่นี่..."
+                  class="tw-w-full tw-px-3.5 tw-py-2.5 tw-rounded-xl tw-border tw-border-slate-300 tw-text-xs sm:tw-text-sm focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-sky-400 tw-bg-white"
                   @keyup.enter="submitManual"
                 />
                 <button
                   @click="submitManual"
-                  class="tw-w-full tw-bg-blue-600 hover:tw-bg-blue-700 tw-text-white tw-text-sm tw-font-medium tw-px-4 tw-py-2 tw-rounded-lg tw-transition-colors"
+                  type="button"
+                  class="tw-w-full tw-bg-sky-600 hover:tw-bg-sky-700 tw-text-white tw-text-xs sm:tw-text-sm tw-font-semibold tw-py-2.5 tw-px-4 tw-rounded-xl tw-transition-colors"
                 >
                   ตรวจสอบสิทธิ์
                 </button>
               </div>
             </div>
+
           </div>
 
-          <!-- Footer -->
-          <div class="tw-px-5 tw-py-4 tw-bg-slate-50 tw-border-t tw-border-slate-100 tw-flex tw-justify-between tw-items-center">
-            <span class="tw-text-xs tw-text-slate-400">Smart QR Parking</span>
+          <!-- ส่วนท้าย Footer -->
+          <div class="tw-px-4 sm:tw-px-6 tw-py-3.5 sm:tw-py-4 tw-bg-slate-50 tw-border-t tw-border-slate-100 tw-flex tw-justify-between tw-items-center">
+            <span class="tw-text-[11px] sm:tw-text-xs tw-text-slate-400 tw-font-mono">Smart QR Parking</span>
             <button
               @click="close"
-              class="tw-bg-slate-200 hover:tw-bg-slate-300 tw-text-gray-700 tw-font-medium tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm tw-transition-colors"
+              type="button"
+              class="tw-bg-slate-200 hover:tw-bg-slate-300 tw-text-gray-700 tw-font-medium tw-py-2 tw-px-5 tw-rounded-xl tw-text-xs sm:tw-text-sm tw-transition-colors"
             >
               ยกเลิก
             </button>
           </div>
+
         </div>
       </div>
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+/* จัดการสไตล์ของ video tag ที่ html5-qrcode สร้างขึ้นมาให้อยู่ในกรอบอย่างสวยงาม */
+:deep(#qr-reader-region video) {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0.75rem !important;
+}
+
+:deep(#qr-reader-region__scan_region) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+</style>
