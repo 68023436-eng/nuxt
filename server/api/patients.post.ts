@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // --- 2) Insert hospital_user role='Patient' (ไม่เก็บ password) ---
-    const { data, error } = await (client.from('hospital_user') as any)
+    const { data, error } = await (serviceClient as any)
       .from('hospital_user')
       .insert({
         user_id: authData.user.id,
