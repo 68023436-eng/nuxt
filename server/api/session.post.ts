@@ -12,7 +12,6 @@ import { collapseSpaces, composeFullName, normalizeNameForMatch, normalizeNameFo
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) || {}
-
     const role = body.role
 
     // 1. ตรวจ role เบื้องต้น
@@ -23,23 +22,25 @@ export default defineEventHandler(async (event) => {
     let session: AccessSession
     let matchedUserId: string | null = null
 
+
+
     if (role === 'Patient') {
-      // ============ Patient Login: ชื่อ + นามสกุล + เบอร์โทร (ไม่ใช้ password/OTP) ============
-      const firstName = typeof body.first_name === 'string' ? collapseSpaces(body.first_name) : ''
-      const lastName = typeof body.last_name === 'string' ? collapseSpaces(body.last_name) : ''
+      // ============ Patient Login ============
+      let fullName = typeof body.full_name === 'string' ? collapseSpaces(body.full_name) : ''
+      
+      if (!fullName){
+        const firstName = typeof body.first_name === 'string' ? collapseSpaces(body.first_name) : ''
+        const lastName = typeof body.last_name === 'string' ? collapseSpaces(body.last_name) : ''
+        if(firstName && lastName) {
+          fullName = composeFullName(firstName, lastName)
+        }
+      }
+
       const phoneInput = typeof body.phone_number === 'string' ? body.phone_number.trim() : ''
       const phoneNumber = normalizePhone(phoneInput)
 
-      if (!firstName || !lastName) {
+      if (!fullName) {
         throw createError({ statusCode: 400, statusMessage: 'กรุณากรอกชื่อและนามสกุล' })
-      }
-      // ประกอบชื่อเต็มจากชื่อ+นามสกุล (normalize เหมือนตอนสร้างบัญชี)
-      const fullName = composeFullName(firstName, lastName)
-      if (fullName.length > 100) {
-        throw createError({ statusCode: 400, statusMessage: 'ชื่อ-นามสกุลต้องไม่เกิน 100 ตัวอักษร' })
-      }
-      if (!/^\d{9,10}$/.test(phoneNumber)) {
-        throw createError({ statusCode: 400, statusMessage: 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก' })
       }
 
       const client = await serverSupabaseClient(event)
@@ -72,28 +73,37 @@ export default defineEventHandler(async (event) => {
 
       const m = matched as any
 
-      if (m.matched.is_active === false) {
+      if (m.is_active === false) {
         throw createError({ statusCode: 401, statusMessage: 'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่' })
       }
 
       session = {
-        full_name: m.matched.full_name,
-        phone_number: m.matched.phone_number || '',
+        full_name: m.full_name,
+        phone_number: m.phone_number || '',
         role,
-        user_id: m.matched.user_id,
+        user_id: m.user_id,
         iat: Math.floor(Date.now() / 1000),
       }
     } else {
-      // ============ Staff Login: ชื่อ + นามสกุล (แยกช่อง) + เบอร์โทร + role (ระบบเดิม) ============
-      const firstName = typeof body.first_name === 'string' ? collapseSpaces(body.first_name) : ''
-      const lastName = typeof body.last_name === 'string' ? collapseSpaces(body.last_name) : ''
+
+
+
+     // ============ Staff Login ============
+      let fullName = typeof body.full_name === 'string' ? collapseSpaces(body.full_name) : ''
+
+      if (!fullName){
+        const firstName = typeof body.first_name === 'string' ? collapseSpaces(body.first_name) : ''
+        const lastName = typeof body.last_name === 'string' ? collapseSpaces(body.last_name) : ''
+        if(firstName && lastName) {
+          fullName = composeFullName(firstName, lastName)
+        }
+      }
+
       const phoneNumber = typeof body.phone_number === 'string' ? body.phone_number.trim() : ''
 
-      if (!firstName || !lastName) {
-        throw createError({ statusCode: 400, statusMessage: 'กรุณากรอกชื่อและนามสกุล' })
+      if(!fullName){
+        throw createError({statusCode: 400, statusMessage: 'กรุณากรอกชื่อและนามสกุล'})
       }
-      // ประกอบชื่อเต็มจากชื่อ+นามสกุล (normalize เหมือนตอนสร้าง Account) เพื่อเทียบกับ column full_name
-      const fullName = composeFullName(firstName, lastName)
       if (fullName.length > 100) {
         throw createError({ statusCode: 400, statusMessage: 'ชื่อ-นามสกุลต้องไม่เกิน 100 ตัวอักษร' })
       }
@@ -115,7 +125,6 @@ export default defineEventHandler(async (event) => {
           statusMessage: 'เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์ กรุณาลองใหม่อีกครั้ง',
         })
       }
-
       // เปรียบเทียบชื่อแบบทนทาน: เทียบ case, ตัด space ยาว, ตัดคำนำหน้า (นางสาว/นาย/นาง)
       const matched = (users || []).find(
         (u: any) => normalizeNameForMatch(u.full_name) === normalizeNameForMatch(fullName)
@@ -151,6 +160,9 @@ export default defineEventHandler(async (event) => {
         iat: Math.floor(Date.now() / 1000),
       }
     }
+
+
+
     // เซ็นต์ session ลง cookie
     setAccessSession(event, session)
 
