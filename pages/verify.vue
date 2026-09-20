@@ -22,7 +22,7 @@
 
       <!-- ผลการตรวจสอบ (แสดงผลลัพธ์แทนฟอร์มเมื่อมีผล) -->
       <div v-if="isGuard && result" class="tw-max-w-2xl tw-mx-auto">
-        <ScanResultCard :ok="result.ok" @rescan="rescan" />
+        <ScanResultCard :ok="result.ok" :reason="result.reason" @rescan="rescan" />
       </div>
 
       <!-- ชุดตรวจสอบ (สแกน QR + ค้นหาเบอร์) -->
@@ -162,7 +162,7 @@ const verifyBody = async (method, value) => {
       method: 'POST',
       body: { method, value },
     })
-    result.value = { ok: !!res.ok }
+    result.value = { ok: !!res.ok, reason: res.reason ?? null }
   } catch (err) {
     errorMsg.value = err?.data?.statusMessage || err?.message || 'ไม่สามารถตรวจสอบสิทธิ์ได้'
   } finally {
