@@ -30,9 +30,10 @@ export const useAppointment = () => {
   /** แปลงข้อความสถานะตามภาษาที่เลือก (ไทย/อังกฤษ) */
   const statusLabel = (status: string): string => {
     if (!status) return '-'
-    const key = `status.${status}`
+    const targetStatus = status === 'no_right' ? 'cancelled' : status
+    const key = `status.${targetStatus}`
     const label = t(key)
-    // ถ้ายังไม่มีคีย์แปลภาษา → ใช้สถานะเดิมจาก system
+
     return label !== key ? label : status
   }
 
