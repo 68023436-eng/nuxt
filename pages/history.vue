@@ -975,6 +975,18 @@ const closeModal = () => {
 // Lifecycle
 // ============================================================
 
+// สลับภาษา → ดึงข้อมูลใหม่ เพื่อให้ชื่อแผนก (department_name) เปลี่ยนเป็น th/en ทันที
+// (ชื่อแผนกคำนวณจากภาษาใน cookie hc_locale ฝั่งเซิร์ฟเวอร์)
+const { locale } = useI18n()
+watch(locale, () => {
+  if (!session || !session.is_logged_in) return
+  if (isGuard.value) {
+    fetchScanHistory()
+  } else {
+    fetchHistory()
+  }
+})
+
 onMounted(() => {
   if (isGuard.value) {
     fetchScanHistory()

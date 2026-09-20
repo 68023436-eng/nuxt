@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
         deleted_at,
         dept_id,
         location_id,
-        department:hospital_dept(dept_name_th),
+        department:hospital_dept(dept_name_th, dept_name_en),
         location:hospital_parking(building_name)
       `)
 
@@ -125,7 +125,9 @@ export default defineEventHandler(async (event) => {
     // พร้อมกรองรายการที่ deleted_at เกิน 30 วันออก (ข้อมูลถูกลบถาวรแล้ว)
     const filtered = (data || []).map((item: any) => ({
       ...item,
-      department_name: item.department?.dept_name_th || item.department?.[0]?.dept_name_th || null,
+      department_name: (getCookie(event, 'hc_locale') === 'en'
+        ? (item.department?.dept_name_en || item.department?.[0]?.dept_name_en)
+        : (item.department?.dept_name_th || item.department?.[0]?.dept_name_th)) || null,
       building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
       department: undefined,
       location: undefined,

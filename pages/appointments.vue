@@ -375,6 +375,10 @@
 import { buildParkingDestination, buildClinicDestination, PARKING_COORD, CLINIC_COORD } from '~/constants/clinic'
 import { RETENTION_DAYS } from '~/constants/appointments'
 
+// เข้าถึงภาษา/refetch ชื่อแผนก (department_name) ตามภาษาที่กำลังใช้
+// (watch(locale) ด้านล่างต้องมี locale นี้ นิยามใน script เท่านั้น i18n module ไม่อินเจ็กต์ให้อัตโนมัติ)
+const { locale } = useI18n()
+
 const { statusClass, statusLabel, formatDate, formatDateTime } = useAppointment()
 
 const { canCancel } = useSession()
@@ -482,6 +486,13 @@ const closeModal = () => {
 // ============================================================
 // Lifecycle
 // ============================================================
+
+// สลับภาษา → ดึงข้อมูลใหม่ เพื่อให้ชื่อแผนก (department_name) เปลี่ยนเป็น th/en ทันที
+// (ชื่อแผนกคำนวณจากภาษาใน cookie hc_locale ฝั่งเซิร์ฟเวอร์)
+watch(locale, () => {
+  if (!session || !session.is_logged_in) return
+  fetchAppointments()
+})
 
 onMounted(() => {
   fetchAppointments()
