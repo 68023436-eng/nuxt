@@ -100,6 +100,21 @@ export default defineEventHandler(async (event) => {
       : (foundRecord?.phone_number ?? null)
 
     const result = found ? 'valid' : 'invalid'
+
+    // เหตุผลประกอบผลตรวจสอบ (ไม่รั่วข้อมูลผู้ป่วย/นัดหมาย — ใช้ข้อความกลางๆ เท่านั้น)
+    // ใช้แยกว่า "ไม่พบรายการ" / "นัดยังไม่ถึงวัน" / "นัดถูกยกเลิกหรือใช้สิทธิไปแล้ว"
+    // เพื่อให้ รปภ. อธิบายผลให้ผู้ป่วยฟังได้ ไม่ใช่แค่เห็น "ไม่มีสิทธิ์" ลอยๆ
+    let reason: string | null = null
+    if (found) {
+      reason = null // ถ้ามีสิทธิ์ → ไม่มีเหตุผลต้องอธิบาย
+    } else if (!foundRecord) {
+      reason = 'ไม่พบนัดหมายจากข้อมูล QR/เบอร์นี้\n(ตรวจสอบว่าเป็น QR ของระบบนี้หรือไม่)'
+    } else if (bangkokDateKey(foundRecord.appointment_date) !== todayKey) {
+      reason = 'นัดหมายนี้ยังไม่ถึงวันตรวจ ใช้สิทธิ์จอดรถได้เฉพาะวันนัดหมายเท่านั้น'
+    } else {
+      reason = 'นัดหมายนี้ถูกยกเลิก หรือได้ใช้สิทธิ์จอดรถไปแล้ว'
+    }
+
     const identity = `${session.full_name} ${session.phone_number}`.trim()
 
     // บันทึกลงประวัติ scan_history
@@ -134,7 +149,7 @@ export default defineEventHandler(async (event) => {
       console.warn('Scan history insert skipped:', logError?.message || logError)
     }
 
-    return { ok: result === 'valid', result }
+    return { ok: result === 'valid', result, reason }
   } catch (err: any) {
     if (err.statusCode) throw err
 

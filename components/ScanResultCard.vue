@@ -6,7 +6,11 @@
  * ห้ามแสดงข้อมูลผู้ป่วย/ทะเบียนรถ/วันนัดหมายใดๆ
  */
 
-defineProps<{ ok: boolean }>()
+defineProps<{
+  ok: boolean
+  /** ข้อความเหตุผลสั้นๆ (ภาษาไทย กลางๆ) — เพื่อให้ รปภ. อธิบายต่อได้ ไม่รั่วข้อมูลผู้ป่วย/นัด */
+  reason?: string | null
+}>()
 defineEmits<{ rescan: [] }>()
 </script>
 
@@ -42,6 +46,11 @@ defineEmits<{ rescan: [] }>()
 
     <p class="tw-text-base sm:tw-text-lg tw-font-medium opacity-80">
       {{ ok ? 'อนุญาตให้จอดรถได้' : 'ไม่อนุญาตให้จอดรถ' }}
+    </p>
+
+    <!-- เหตุผลสั้นๆ (ไม่มีข้อมูลผู้ป่วย/ทะเบียน/วันนัด) -->
+    <p v-if="!ok && reason" class="tw-text-sm sm:tw-text-base tw-font-medium tw-text-slate-600 tw-bg-white/70 tw-px-4 tw-py-2 tw-rounded-lg">
+      {{ reason }}
     </p>
 
     <!-- ปุ่มกลับไปสแกน/ค้นหาใหม่ -->
