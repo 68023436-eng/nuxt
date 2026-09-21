@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { ROLE_PERMISSIONS, ROLE_LABELS } from '~/constants/roles'
+import { ROLE_PERMISSIONS, unionPermissions } from '~/constants/roles'
 import type { AccessRole, AccessPermission } from '~/constants/roles'
 
 export type { AccessRole, AccessPermission }
@@ -17,7 +17,10 @@ export const ACCESS_COOKIE_MAX_AGE = 60 * 60 * 8 // 8 ชั่วโมง
 export interface AccessSession {
   full_name: string
   phone_number: string
+  // บทบาทหลัก (roles[0]) — เก็บไว้เพื่อ backward compatibility + หน้าแรก
   role: AccessRole
+  // บทบาททั้งหมดที่บัญชีนี้มี (1 user มีได้หลาย role)
+  roles: AccessRole[]
   user_id?: string
   iat: number
 }
@@ -56,6 +59,23 @@ export function isAccessRole(value: unknown): value is AccessRole {
   return typeof value === 'string' && (ALL_ROLES as string[]).includes(value)
 }
 
+// ปรับค่า roles ที่ส่งมาจาก client ให้เป็นอาร์เรย์ที่ปลอดภัย
+// - กรองเฉพาะ role ที่อนุญาต
+// - dedupe + เรียงตามลำดับ `allowed` (ตัวแรก = บทบาทหลัก)
+export function normalizeRoles(input: unknown, allowed: AccessRole[]): AccessRole[] {
+  const raw = Array.isArray(input)
+    ? input
+    : typeof input === 'string'
+      ? [input]
+      : []
+  const seen = new Set<AccessRole>()
+  const valid = new Set(allowed)
+  for (const r of raw) {
+    if (valid.has(r as AccessRole)) seen.add(r as AccessRole)
+  }
+  return allowed.filter((r) => seen.has(r))
+}
+
 export function sealAccessSession(session: AccessSession): string {
   const body = Buffer.from(JSON.stringify(session)).toString('base64url')
   return `${body}.${sign(body)}`
@@ -74,7 +94,10 @@ export function unsealAccessSession(token: string | undefined | null, maxAgeSeco
     const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as AccessSession
     if (!parsed || typeof parsed.role !== 'string' || !isAccessRole(parsed.role)) return null
 
-    // validate iat เลขวินาที (epoch) — เหมือนเวลาที่ใช้ seal
+    // read roles list — รองรับ cookie ใหม่ (roles array) และแบบเก่า (ไม่มี roles)
+    const rawRoles = Array.isArray(parsed.roles) ? parsed.roles.filter(isAccessRole) : [parsed.role]
+
+    // iat เลขวินาที (epoch) — เหมือนเวลาที่ใช้ seal
     if (typeof parsed.iat !== 'number' || !Number.isFinite(parsed.iat)) return null
 
     const now = Math.floor(Date.now() / 1000)
@@ -84,7 +107,11 @@ export function unsealAccessSession(token: string | undefined | null, maxAgeSeco
     // iat ในอนาคตเกินกว่าความคลาดเคลื่อนของนาฬิกา → ไม่น่าเชื่อถือ
     if (parsed.iat > now + IAT_SKEW_SECONDS) return null
 
-    return parsed
+    return {
+      ...parsed,
+      role: parsed.role,
+      roles: rawRoles.length ? rawRoles : [parsed.role],
+    } as AccessSession
   } catch {
     return null
   }
@@ -110,7 +137,8 @@ export function clearAccessSession(event: any): void {
 
 export function hasPermission(session: AccessSession | null, perm: AccessPermission): boolean {
   if (!session) return false
-  return ROLE_PERMISSIONS[session.role]?.includes(perm) ?? false
+  // สิทธิ์ = รวมทุกบทบาทที่บัญชีนี้มี
+  return unionPermissions(session.roles || [session.role]).includes(perm)
 }
 
 // ต้องการ session (เข้าใช้งานแล้ว) — ไม่มี → 401
@@ -128,7 +156,8 @@ export function requireSession(event: any): AccessSession {
 // ต้องการ session ที่มี role ใด role หนึ่งในที่กำหนด — ไม่ใช่ → 403
 export function requireAnyRole(event: any, roles: AccessRole[]): AccessSession {
   const session = requireSession(event)
-  if (!roles.includes(session.role)) {
+  const userRoles = session.roles || [session.role]
+  if (!userRoles.some((r) => roles.includes(r))) {
     throw createError({
       statusCode: 403,
       statusMessage: `บทบาทของคุณ (${session.role}) ไม่มีสิทธิ์ใช้ฟังก์ชันนี้`,

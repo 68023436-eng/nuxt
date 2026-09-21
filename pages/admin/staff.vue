@@ -70,9 +70,11 @@
                 <span :class="item.is_active ? 'tw-text-emerald-600 tw-bg-emerald-100' : 'tw-text-gray-500 tw-bg-gray-200'" class="tw-inline-block tw-px-2 tw-py-0.5 tw-rounded-full tw-text-[10px] tw-font-medium">
                   {{ item.is_active ? 'ใช้งาน' : 'ปิดใช้งาน' }}
                 </span>
-                <span :class="ROLE_BADGE_CLASSES[item.role] || 'tw-bg-slate-100 tw-text-slate-700'" class="tw-text-[10px] tw-font-medium tw-px-2 tw-py-0.5 tw-rounded-full">
-                  {{ roleLabel(item.role) }}
-                </span>
+                <template v-for="r in itemRoles(item)" :key="'mb-' + item.user_id + '-' + r">
+                  <span :class="ROLE_BADGE_CLASSES[r] || 'tw-bg-slate-100 tw-text-slate-700'" class="tw-inline-block tw-text-[10px] tw-font-medium tw-px-2 tw-py-0.5 tw-rounded-full">
+                    {{ roleLabel(r) }}
+                  </span>
+                </template>
               </div>
             </div>
 
@@ -93,8 +95,7 @@
             <div class="tw-flex tw-gap-2 tw-pt-1">
               <button
                 @click="openEdit(item)"
-                :disabled="isSelf(item)"
-                class="tw-flex-1 tw-bg-blue-500 hover:tw-bg-blue-600 disabled:tw-bg-gray-200 disabled:tw-text-gray-400 tw-text-white tw-py-2 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
+                class="tw-flex-1 tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-py-2 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
               >
                 แก้ไข
               </button>
@@ -141,7 +142,9 @@
                   </div>
                 </td>
                 <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-whitespace-nowrap">
-                  <span :class="ROLE_BADGE_CLASSES[item.role] || 'tw-bg-slate-100 tw-text-slate-700'" class="tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">{{ roleLabel(item.role) }}</span>
+                  <template v-for="r in itemRoles(item)" :key="'dt-' + item.user_id + '-' + r">
+                    <span :class="ROLE_BADGE_CLASSES[r] || 'tw-bg-slate-100 tw-text-slate-700'" class="tw-inline-block tw-mr-1.5 tw-px-2.5 tw-py-1 tw-rounded-full tw-text-xs tw-font-medium">{{ roleLabel(r) }}</span>
+                  </template>
                 </td>
                 <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-700 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</td>
                 <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-700 tw-whitespace-nowrap">{{ item.email || '-' }}</td>
@@ -154,8 +157,7 @@
                   <div class="tw-flex tw-justify-center tw-gap-2">
                     <button
                       @click="openEdit(item)"
-                      :disabled="isSelf(item)"
-                      class="tw-bg-blue-500 hover:tw-bg-blue-600 disabled:tw-bg-gray-200 disabled:tw-text-gray-400 disabled:tw-cursor-not-allowed tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
+                      class="tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
                     >
                       แก้ไข
                     </button>
@@ -175,7 +177,7 @@
         </div>
 
         <div class="tw-px-4 sm:tw-px-6 tw-py-3.5 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-xs sm:tw-text-sm tw-text-gray-500">
-          ทั้งหมด {{ staffList.length }} รายการ (ไม่สามารถแก้ไข/ลบบัญชีของตัวเองได้)
+          ทั้งหมด {{ staffList.length }} รายการ (แก้ไขข้อมูลส่วนตัวของตัวเองได้ แต่ไม่สามารถแก้ไขสิทธิ์/ลบบัญชีของตัวเองได้)
         </div>
       </div>
     </main>
@@ -204,11 +206,30 @@
               </div>
 
               <div>
-                <label class="tw-block tw-text-xs sm:tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">บทบาท <span class="tw-text-red-500">*</span></label>
-                <select v-model="form.role"
-                  class="tw-w-full tw-border tw-border-slate-300 tw-p-2.5 sm:tw-p-3 tw-text-sm tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-emerald-400 tw-bg-white">
-                  <option v-for="r in STAFF_ROLES" :key="r" :value="r">{{ roleLabel(r) }}</option>
-                </select>
+                <label class="tw-block tw-text-xs sm:tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">บทบาท (เลือกได้หลายบทบาท) <span class="tw-text-red-500">*</span></label>
+                <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-2">
+                  <label
+                    v-for="r in STAFF_ROLES"
+                    :key="r"
+                    :class="[
+                      'tw-flex tw-items-center tw-gap-2.5 tw-border tw-rounded-xl tw-px-3 tw-py-2.5 tw-cursor-pointer tw-select-none tw-transition-colors',
+                      form.roles.includes(r) ? 'tw-border-emerald-400 tw-bg-emerald-50' : 'tw-border-slate-300 tw-bg-white hover:tw-bg-slate-50',
+                      isSelfEdit ? 'tw-opacity-60 tw-cursor-not-allowed' : ''
+                    ]"
+                  >
+                    <input
+                      v-model="form.roles"
+                      type="checkbox"
+                      :value="r"
+                      :disabled="isSelfEdit || saving"
+                      class="tw-w-4 tw-h-4 tw-accent-emerald-600 tw-flex-shrink-0"
+                    />
+                    <span class="tw-text-sm tw-font-medium tw-text-gray-700">{{ roleLabel(r) }}</span>
+                  </label>
+                </div>
+                <p v-if="isSelfEdit" class="tw-text-xs tw-text-amber-600 tw-mt-1.5 tw-bg-amber-50 tw-border tw-border-amber-200 tw-p-2 tw-rounded-lg">
+                  บัญชีของคุณ — แก้ไขข้อมูลส่วนตัวได้ แต่ไม่สามารถเปลี่ยนบทบาท/สิทธิ์ของตัวเองได้
+                </p>
               </div>
 
               <div class="tw-grid tw-grid-cols-1 sm:tw-grid-cols-2 tw-gap-4">
@@ -235,8 +256,8 @@
               </div>
 
               <div class="tw-flex tw-items-center tw-gap-3 tw-pt-1">
-                <label class="tw-flex tw-items-center tw-gap-2.5 tw-cursor-pointer tw-select-none">
-                  <input v-model="form.is_active" type="checkbox" class="tw-w-4 sm:tw-w-5 tw-h-4 sm:tw-h-5 tw-accent-emerald-600" />
+                <label :class="['tw-flex tw-items-center tw-gap-2.5 tw-cursor-pointer tw-select-none', isSelfEdit ? 'tw-opacity-60 tw-cursor-not-allowed' : '']">
+                  <input v-model="form.is_active" type="checkbox" :disabled="isSelfEdit || saving" class="tw-w-4 sm:tw-w-5 tw-h-4 sm:tw-h-5 tw-accent-emerald-600" />
                   <span class="tw-text-sm tw-font-medium tw-text-gray-700">เปิดใช้งานบัญชีนี้</span>
                 </label>
               </div>
@@ -270,7 +291,7 @@
               <p class="tw-text-xs sm:tw-text-sm tw-text-gray-600 tw-mb-3">
                 คุณต้องการลบ
                 <strong class="tw-text-gray-800 tw-font-semibold">{{ itemToDelete?.full_name }}</strong>
-                ({{ itemToDelete ? roleLabel(itemToDelete.role) : '' }}) ใช่หรือไม่?
+                ({{ itemToDelete ? itemRoles(itemToDelete).map((r) => roleLabel(r)).join(', ') : '' }}) ใช่หรือไม่?
               </p>
               <p class="tw-text-xs tw-text-red-600 tw-bg-red-50 tw-p-2.5 tw-rounded-lg tw-border tw-border-red-200">
                 เมื่อลบแล้วผู้ใช้รายนี้จะไม่สามารถเข้าสู่ระบบได้อีก การกระทำนี้ไม่สามารถย้อนกลับได้
@@ -302,7 +323,7 @@ import { ROLE_LABELS, ROLE_BADGE_CLASSES, STAFF_ROLES } from '~/constants/roles'
 // Composables
 // ============================================================
 
-const { session, refresh } = useSession()
+const { session, roles, refresh } = useSession()
 
 // ============================================================
 // State
@@ -315,6 +336,7 @@ const errorMsg = ref('')
 const showForm = ref(false)
 const showDeleteModal = ref(false)
 const editingId = ref(null)
+const isSelfEdit = ref(false)
 const saving = ref(false)
 const deletingId = ref(null)
 const formError = ref('')
@@ -322,7 +344,7 @@ const itemToDelete = ref(null)
 
 const emptyForm = () => ({
   full_name: '',
-  role: 'Clinic_staff',
+  roles: ['Clinic_staff'],
   phone_number: '',
   email: '',
   password: '',
@@ -339,11 +361,16 @@ function roleLabel(role) {
   return ROLE_LABELS[role] || role
 }
 
-// บัญชีของตัวเอง = ชื่อ+บทบาทตรงกับ session (กันแก้ไข/ลบตัวเอง)
+// บทบาททั้งหมดของรายการ (บัญชีใหม่อาจมี role หลักอย่างเดียว)
+function itemRoles(item) {
+  return Array.isArray(item?.roles) && item.roles.length ? item.roles : [item?.role].filter(Boolean)
+}
+
+// บัญชีของตัวเอง = user_id ตรงกับ session (กันแก้ไขสิทธิ์/ลบบัญชีตัวเอง)
 function isSelf(item) {
   const s = session.value
   if (!s) return false
-  return item.full_name === s.full_name && item.role === s.role
+  return String(item?.user_id) === String(s.user_id)
 }
 
 // ============================================================
@@ -371,6 +398,7 @@ const fetchStaff = async () => {
 const openCreate = () => {
   Object.assign(form, emptyForm())
   editingId.value = null
+  isSelfEdit.value = false
   formError.value = ''
   showForm.value = true
 }
@@ -378,13 +406,14 @@ const openCreate = () => {
 const openEdit = (item) => {
   Object.assign(form, {
     full_name: item.full_name,
-    role: item.role,
+    roles: itemRoles(item),
     phone_number: item.phone_number || '',
     email: item.email || '',
     password: '',
     is_active: item.is_active,
   })
   editingId.value = item.user_id
+  isSelfEdit.value = isSelf(item)
   formError.value = ''
   showForm.value = true
 }
@@ -393,6 +422,7 @@ const closeForm = () => {
   if (saving.value) return
   showForm.value = false
   editingId.value = null
+  isSelfEdit.value = false
 }
 
 const saveStaff = async () => {
@@ -428,7 +458,7 @@ const saveStaff = async () => {
   try {
     const payload = {
       full_name: form.full_name.trim(),
-      role: form.role,
+      roles: [...form.roles],
       phone_number: form.phone_number.trim(),
       email: form.email.trim(),
       password: form.password || undefined,
@@ -442,6 +472,8 @@ const saveStaff = async () => {
     }
 
     closeForm()
+    // ถ้าแก้ไขข้อมูลตัวเองให้ refresh session (ชื่อ/เบอร์เปลี่ยนใน sidebar)
+    if (isSelfEdit.value) await refresh()
     await fetchStaff()
   } catch (error) {
     formError.value = error?.data?.statusMessage || error?.message || 'บันทึกไม่สำเร็จ กรุณาลองใหม่'
@@ -488,7 +520,7 @@ const confirmDelete = async () => {
 
 onMounted(async () => {
   await refresh()
-  if (session.value?.role !== 'Admin') {
+  if (!roles.value.includes('Admin')) {
     navigateTo('/appointments')
     return
   }

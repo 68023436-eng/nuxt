@@ -1,9 +1,11 @@
 import { serverSupabaseClient } from '#supabase/server'
+import { STAFF_ROLES } from '~/constants/roles'
 
 /**
  * GET /api/admin/staff
  * ดึงรายชื่อเจ้าหน้าที่ทั้งหมด (Admin / Clinic_staff / Security_guard)
- * - สงวนสิทธิ์เฉพาะ Admin เท่านั้น
+ * - สงวนสิทธิ์เฉพาะ Admin เท่านั้น (manage)
+ * - items มาพร้อม roles[] (ทุกบทบาทของบัญชี) — 1 user มีได้หลาย role
  */
 export default defineEventHandler(async (event) => {
   try {
@@ -13,8 +15,8 @@ export default defineEventHandler(async (event) => {
 
     const { data, error } = await client
       .from('hospital_user')
-      .select('user_id, full_name, role, phone_number, email, is_active')
-      .in('role', ['Admin', 'Clinic_staff', 'Security_guard'])
+      .select('user_id, full_name, role, roles, phone_number, email, is_active')
+      .in('role', STAFF_ROLES)
       .order('role', { ascending: true })
       .order('full_name', { ascending: true })
 

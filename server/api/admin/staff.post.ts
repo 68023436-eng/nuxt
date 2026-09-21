@@ -2,15 +2,17 @@ import { serverSupabaseClient, serverSupabaseServiceRole } from '#supabase/serve
 import { ROLE_LABELS, STAFF_ROLES } from '~/constants/roles'
 import type { AccessRole } from '~/constants/roles'
 import { collapseSpaces } from '~/utils/name'
+import { normalizeRoles } from '~/server/utils/access'
 
 /**
  * POST /api/admin/staff
  * สร้างบัญชีเจ้าหน้าที่ใหม่ (Admin / Clinic_staff / Security_guard)
+ * - รองรับ 1 user = หลายบทบาท (roles[])
  * - ใช้ Service Role สร้าง auth user ใน Supabase Auth (user_id โยงกับ auth.users ตาม FK)
  * - สงวนสิทธิ์เฉพาะ Admin เท่านั้น
  *
- * หมายเหตุ: ระบบ login ปัจจุบันยังใช้ "ชื่อ + role" เท่านั้น (ไม่ตรวจรหัสผ่าน/อีเมล)
- * แต่ต้องมีอีเมล + รหัสผ่านเพื่อสร้าง auth user ให้ FK สมบูรณ์
+ * หมายเหตุ: ระบบ login ปัจจุบันใช้ "ชื่อ + เบอร์โทร" เท่านั้น แต่ต้องมีอีเมล + รหัสผ่าน
+ * เพื่อสร้าง auth user ให้ FK สมบูรณ์
  */
 export default defineEventHandler(async (event) => {
   try {
@@ -19,7 +21,8 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event) || {}
 
     const fullName = typeof body.full_name === 'string' ? collapseSpaces(body.full_name) : ''
-    const role = body.role as string
+    const roles = normalizeRoles(body.roles ?? body.role, STAFF_ROLES)
+    const primaryRole = roles[0] as AccessRole | undefined
     const phoneNumber = typeof body.phone_number === 'string' ? body.phone_number.trim() : ''
     const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
     const password = typeof body.password === 'string' ? body.password : ''
@@ -32,8 +35,8 @@ export default defineEventHandler(async (event) => {
     if (fullName.length > 100) {
       throw createError({ statusCode: 400, statusMessage: 'ชื่อต้องไม่เกิน 100 ตัวอักษร' })
     }
-    if (!STAFF_ROLES.includes(role as AccessRole)) {
-      throw createError({ statusCode: 400, statusMessage: 'กรุณาเลือกบทบาทเจ้าหน้าที่ที่ถูกต้อง' })
+    if (!roles.length) {
+      throw createError({ statusCode: 400, statusMessage: 'กรุณาเลือกบทบาทอย่างน้อย 1 บทบาท' })
     }
     if (phoneNumber && !/^\d{9,10}$/.test(phoneNumber)) {
       throw createError({ statusCode: 400, statusMessage: 'เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก' })
@@ -48,22 +51,27 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const serviceClient = await serverSupabaseServiceRole(event)
 
-    // กันชื่อซ้ำในบทบาทเดียวกัน (ระบบ login ใช้ชื่อ+role ตรงกัน)
-    const { data: dup, error: dupErr } = await client
-      .from('hospital_user')
-      .select('user_id')
-      .eq('full_name', fullName)
-      .eq('role', role)
-      .maybeSingle()
-
-    if (dupErr) {
-      console.error('Check duplicate staff error:', dupErr.message)
+    // กันชื่อซ้ำ (ถ้ามีบัญชีเจ้าหน้าที่อื่นชื่อเดียวกันกับบทบาทที่จะให้)
+    const checks = await Promise.all(
+      roles.map((r) =>
+        client
+          .from('hospital_user')
+          .select('user_id')
+          .eq('full_name', fullName)
+          .contains('roles', [r])
+          .maybeSingle()
+      )
+    )
+    const dupErrRaw = checks.find((c) => c.error)
+    if (dupErrRaw?.error) {
+      console.error('Check duplicate staff error:', dupErrRaw.error.message)
       throw createError({ statusCode: 500, statusMessage: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล' })
     }
-    if (dup) {
+    const dupRole = roles.find((r, i) => checks[i].data)
+    if (dupRole) {
       throw createError({
         statusCode: 409,
-        statusMessage: `มีผู้ใช้ "ชื่อ + ${ROLE_LABELS[role as AccessRole]}" นี้อยู่แล้วในระบบ`,
+        statusMessage: `มีผู้ใช้ "ชื่อ ${fullName} (${ROLE_LABELS[dupRole]})" นี้อยู่แล้วในระบบ`,
       })
     }
 
@@ -72,7 +80,7 @@ export default defineEventHandler(async (event) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name: fullName, role },
+      user_metadata: { full_name: fullName, role: primaryRole, roles },
     })
 
     if (authErr || !authData?.user?.id) {
@@ -86,12 +94,13 @@ export default defineEventHandler(async (event) => {
       .insert({
         user_id: authData.user.id,
         full_name: fullName,
-        role,
+        role: primaryRole,
+        roles,
         phone_number: phoneNumber || null,
         email,
         is_active: isActive,
       } as any)
-      .select('user_id, full_name, role, phone_number, email, is_active')
+      .select('user_id, full_name, role, roles, phone_number, email, is_active')
       .single()
 
     if (error) {

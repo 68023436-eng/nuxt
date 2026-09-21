@@ -16,6 +16,23 @@ export const ROLE_PERMISSIONS: Record<AccessRole, AccessPermission[]> = {
   Patient: ['view'],
 }
 
+// ลำดับสิทธิ์ (ใช้อ้างอิงการเรียง union ของหลายบทบาท)
+export const PERMISSION_ORDER: AccessPermission[] = ['view', 'create', 'cancel', 'restore', 'manage']
+
+// รวมสิทธิ์จากหลายบทบาท (dedupe, เรียงตาม PERMISSION_ORDER) — 1 user มีได้หลาย role
+export function unionPermissions(roles: AccessRole[]): AccessPermission[] {
+  const out: AccessPermission[] = []
+  for (const p of PERMISSION_ORDER) {
+    if (roles.some((r) => ROLE_PERMISSIONS[r]?.includes(p)) && !out.includes(p)) out.push(p)
+  }
+  return out
+}
+
+// รวม label ของหลายบทบาทเข้าด้วยกัน เช่น "แอดมิน, เจ้าหน้าที่ รปภ."
+export function joinRoleLabels(roles: AccessRole[], labelOf: (r: AccessRole) => string): string {
+  return roles.map((r) => labelOf(r)).join(', ')
+}
+
 export const ROLE_LABELS: Record<AccessRole, string> = {
   Admin: 'แอดมิน',
   Clinic_staff: 'เจ้าหน้าที่คลินิก',
