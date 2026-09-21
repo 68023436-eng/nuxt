@@ -162,8 +162,8 @@
 // Role guard — Dashboard เฉพาะ Admin / Clinic_staff
 // ============================================================
 
-const { role } = useSession()
-const isAllowed = computed(() => role.value === 'Admin' || role.value === 'Clinic_staff')
+const { roles } = useSession()
+const isAllowed = computed(() => roles.value.includes('Admin') || roles.value.includes('Clinic_staff'))
 
 // ============================================================
 // State
