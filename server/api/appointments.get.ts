@@ -1,5 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { RETENTION_DAYS } from '~/constants/appointments'
+import type { AccessRole } from '~/constants/roles'
 
 /**
  * สถานะแสดงผลของการนัดหมาย — คำนวณจากข้อมูลจริง (ไม่เก็บใน DB)
@@ -36,15 +37,10 @@ function deriveAppointmentStatus(item: any, todayKey: string, usedAppointmentIds
  */
 export default defineEventHandler(async (event) => {
   try {
-    const { role, ...session } = requirePermission(event, 'view')
-
-    // รปภ. ต้องไม่เห็นข้อมูลนัดหมาย/ผู้ป่วย
-    if (role === 'Security_guard') {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'บทบาทของคุณไม่มีสิทธิ์เข้าถึงข้อมูลนัดหมาย (เฉพาะหน้า ตรวจสอบ QR / ประวัติการตรวจสอบ)',
-      })
-    }
+    const session = requirePermission(event, 'view')
+    // สิทธิ์/ขอบเขตดูข้อมูล = พิจารณาจากทุกบทบาทที่บัญชีมี (union) ไม่ใช่บทบาทหลัก
+    const userRoles: AccessRole[] = session.roles?.length ? session.roles : [session.role]
+    const isStaffView = userRoles.some((r) => r === 'Admin' || r === 'Clinic_staff')
 
     const client = await serverSupabaseClient(event)
     const retentionDays = RETENTION_DAYS
@@ -70,7 +66,9 @@ export default defineEventHandler(async (event) => {
         location:hospital_parking(building_name)
       `)
 
-    if (role === 'Patient') {
+    if (isStaffView) {
+      // Admin / Clinic_staff (หรือรวมกับบทบาทอื่น) → เห็นทั้งหมด
+    } else if (userRoles.includes('Patient')) {
       // Patient ดูได้เฉพาะนัดของตัวเองเท่านั้น
       // ผูกเจ้าของจาก session.user_id (account ที่สร้างไว้) — ไม่รับ user_id/patient_id จาก client
       // (Req 10: ผู้ป่วยเห็นเฉพาะนัดของตัวเอง ผูกจาก Account ไม่สามารถแก้จาก URL ได้)
@@ -78,6 +76,12 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 403, statusMessage: 'ไม่สามารถระบุบัญชีผู้ป่วยได้ กรุณาเข้าสู่ระบบใหม่' })
       }
       query.eq('user_id', session.user_id)
+    } else {
+      // รปภ. อย่างเดียว → ต้องไม่เห็นข้อมูลนัดหมาย/ผู้ป่วย
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'บทบาทของคุณไม่มีสิทธิ์เข้าถึงข้อมูลนัดหมาย (เฉพาะหน้า ตรวจสอบ QR / ประวัติการตรวจสอบ)',
+      })
     }
 
     const { data, error } = await query.order('created_at', { ascending: false })

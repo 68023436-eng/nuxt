@@ -1,5 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { STAFF_ROLES } from '~/constants/roles'
+import type { AccessRole } from '~/constants/roles'
 
 /**
  * GET /api/dashboard/stats?month=YYYY-MM
@@ -12,10 +13,11 @@ import { STAFF_ROLES } from '~/constants/roles'
  */
 export default defineEventHandler(async (event) => {
   try {
-    const { role } = requirePermission(event, 'view')
+    const session = requirePermission(event, 'view')
 
-    // รปภ./Patient ไม่เห็นสถิติรวม (ดูได้เฉพาะของตัวเอง / หน้า ตรวจสอบQR)
-    if (role === 'Security_guard' || role === 'Patient') {
+    // สถิติรวมเปิดให้เฉพาะ Admin / Clinic_staff — พิจารณาจากทุกบทบาทที่บัญชีมี (union)
+    const userRoles: AccessRole[] = session.roles?.length ? session.roles : [session.role]
+    if (!userRoles.some((r) => r === 'Admin' || r === 'Clinic_staff')) {
       throw createError({
         statusCode: 403,
         statusMessage: 'บทบาทของคุณไม่มีสิทธิ์เข้าถึงสถิติรวม (เฉพาะ Admin / เจ้าหน้าที่คลินิก)',
