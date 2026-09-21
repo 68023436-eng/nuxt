@@ -7,7 +7,7 @@
     <main class="tw-flex-1 tw-min-w-0 tw-p-4 sm:tw-p-6 md:tw-p-8 tw-pt-16 md:tw-pt-8">
       
       <!-- 1. กรณีไม่มีสิทธิ์เข้าถึง (Access Denied) -->
-      <div v-if="!isGuard" class="tw-max-w-md tw-mx-auto tw-mt-12 sm:tw-mt-20 tw-text-center tw-bg-white tw-p-6 sm:tw-p-8 tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-200">
+      <div v-if="!canScan" class="tw-max-w-md tw-mx-auto tw-mt-12 sm:tw-mt-20 tw-text-center tw-bg-white tw-p-6 sm:tw-p-8 tw-rounded-2xl tw-shadow-sm tw-border tw-border-slate-200">
         <div class="tw-w-16 sm:tw-w-20 tw-h-16 sm:tw-h-20 tw-bg-red-100 tw-rounded-full tw-flex tw-items-center tw-justify-center tw-mx-auto tw-mb-4">
           <span class="tw-text-3xl sm:tw-text-4xl">🔒</span>
         </div>
@@ -111,14 +111,12 @@
 // Role guard — Security_guard only
 // ============================================================
 
-const { role } = useSession()
+const { roles, canScan, asAdmin } = useSession()
 
-const isGuard = computed(() => role.value === 'Security_guard')
-
-watch(role, (r) => {
-  if (r && r !== 'Security_guard') {
-    navigateTo(r === 'Admin' ? '/admin/staff' : '/appointments')
-  }
+watch(roles, (r) => {
+  const rs = r || []
+  if (rs.includes('Security_guard')) return
+  navigateTo(asAdmin.value ? '/admin/staff' : '/appointments')
 }, { immediate: true })
 
 // ============================================================

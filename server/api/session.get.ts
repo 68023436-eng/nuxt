@@ -1,6 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 
-import { ROLE_PERMISSIONS } from '~/constants/roles'
+import { unionPermissions } from '~/constants/roles'
 
 /**
  * GET /api/session
@@ -12,13 +12,16 @@ export default defineEventHandler(async (event) => {
     return { session: null }
   }
 
+  const roles = (session.roles || [session.role]).filter(Boolean)
+
   return {
     session: {
       full_name: session.full_name,
       phone_number: session.phone_number,
       role: session.role,
+      roles,
       user_id: session.user_id || null,
-      permissions: ROLE_PERMISSIONS[session.role] || [],
+      permissions: unionPermissions(roles),
       server_today: bangkokToday(),
     },
   }

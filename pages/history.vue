@@ -901,10 +901,8 @@ import { RETENTION_DAYS } from '~/constants/appointments'
 
 const { statusClass, statusLabel, formatDate, formatDateTime, daysUntilPurge, purgeNotice } = useAppointment()
 
-const { session, role, canRestore, canManage } = useSession()
-
-const isGuard = computed(() => role.value === 'Security_guard')
-const isPatient = computed(() => role.value === 'Patient')
+const { session, roles, canRestore, canManage, isGuard } = useSession()
+const isPatient = computed(() => roles.value.length === 1 && roles.value[0] === 'Patient')
 
 // ============================================================
 // State
