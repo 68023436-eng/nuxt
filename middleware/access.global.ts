@@ -59,6 +59,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
       roles = Array.isArray(res?.session?.roles) && res.session.roles.length
         ? res.session.roles
         : (role ? [role] : null)
+      // ซิงก์ session ล่าสุด (หลัง reconciled กับ DB) ลง state —
+      // ทำให้เมนู/การ์ดหน้าเรนเดอร์ใหม่จากบทบาทปัจจุบันที่ Admin เปลี่ยนให้
+      useState<any>('hc-session').value = res?.session || null
     } catch {
       hasSession = false
     }
