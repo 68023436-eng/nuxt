@@ -1,5 +1,5 @@
 import { getCookie } from 'h3'
-import { ROLE_PERMISSIONS } from '~/constants/roles'
+import { ROLE_PERMISSIONS, unionPermissions } from '~/constants/roles'
 import type { AccessRole } from '~/constants/roles'
 
 /**
@@ -21,12 +21,17 @@ export default defineNuxtPlugin(async () => {
   const session = await unsealAccessSession(getCookie(event, 'hc_access'))
   if (!session) return
 
+  const roles = (session.roles || [session.role]).filter(
+    (r: AccessRole) => ROLE_KEYS.includes(r)
+  )
+
   useState<any>('hc-session', () => null).value = {
     full_name: session.full_name,
     phone_number: session.phone_number,
     role: session.role,
+    roles,
     user_id: session.user_id || null,
-    permissions: ROLE_PERMISSIONS[session.role] || [],
+    permissions: unionPermissions(roles),
   }
 })
 
@@ -76,13 +81,23 @@ async function unsealAccessSession(token: string | undefined | null, maxAgeSecon
     const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'))
     if (!parsed || typeof parsed.role !== 'string' || !ROLE_KEYS.includes(parsed.role)) return null
 
+    const roles = Array.isArray(parsed.roles)
+      ? parsed.roles.filter((r: unknown) => typeof r === 'string' && ROLE_KEYS.includes(r))
+      : [parsed.role]
+
     if (typeof parsed.iat !== 'number' || !Number.isFinite(parsed.iat)) return null
 
     const now = Math.floor(Date.now() / 1000)
     if (now - parsed.iat > maxAgeSeconds) return null
     if (parsed.iat > now + IAT_SKEW_SECONDS) return null
 
-    return parsed as { full_name: string; phone_number: string; role: AccessRole; user_id?: string }
+    return {
+      full_name: parsed.full_name as string,
+      phone_number: parsed.phone_number as string,
+      role: parsed.role as AccessRole,
+      roles,
+      user_id: parsed.user_id as string | undefined,
+    }
   } catch {
     return null
   }

@@ -80,11 +80,12 @@ export default defineEventHandler(async (event) => {
         user_id: authData.user.id,
         full_name: fullName,
         role: 'Patient',
+        roles: ['Patient'],
         phone_number: phoneNumber,
         email: fakeEmail,
         is_active: true,
       })
-      .select('user_id, full_name, role, phone_number, is_active')
+      .select('user_id, full_name, role, roles, phone_number, is_active')
       .single()
 
     if (error) {

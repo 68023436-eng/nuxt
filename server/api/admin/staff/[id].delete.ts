@@ -31,9 +31,9 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'ไม่พบเจ้าหน้าที่' })
     }
 
-    // ห้ามลบบัญชีตัวเอง
+    // ห้ามลบบัญชีตัวเอง (เช็คด้วย user_id — กันมั่วจากบัญชีหลายบทบาท)
     const target = existing as any
-    const isSelf = target?.full_name === adminSession?.full_name && target?.role === adminSession?.role
+    const isSelf = String(target?.user_id) === String(adminSession?.user_id)
     if (isSelf) {
       throw createError({ statusCode: 403, statusMessage: 'ไม่สามารถลบบัญชีของตัวเองได้' })
     }

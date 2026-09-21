@@ -66,7 +66,7 @@
         <!-- เมนูนำทาง -->
         <div class="tw-flex tw-flex-col tw-items-center tw-mt-6 tw-gap-2">
           <button 
-            v-if="isGuard"
+            v-if="canScan"
             @click="goTo('verify')" 
             class="tw-p-3 tw-w-full tw-text-left tw-border-b tw-border-slate-200 hover:tw-bg-slate-50 tw-rounded-lg tw-transition tw-font-medium tw-text-gray-700"
           >
@@ -119,8 +119,17 @@
         >
           {{ $t('sidebar.logout') }} ⏻
         </button>
+        <button
+          @click="showProfile = true"
+          class="tw-mt-1 tw-w-full tw-text-left tw-text-sm tw-text-emerald-700 hover:tw-bg-emerald-50 tw-p-2 tw-rounded-lg tw-transition tw-font-medium"
+        >
+          แก้ไขโปรไฟล์ ✏️
+        </button>
       </div>
     </aside>
+
+    <!-- แก้ไขข้อมูลส่วนตัว (ทุกบทบาท) -->
+    <ProfileModal v-model="showProfile" />
   </div>
 </template>
 
@@ -130,6 +139,7 @@
 // ============================================================
 
 const isOpen = ref(false)
+const showProfile = ref(false)
 const toggleSidebar = () => {
   isOpen.value = !isOpen.value
 }
@@ -137,9 +147,7 @@ const closeSidebar = () => {
   isOpen.value = false
 }
 
-const { session, role, roleLabel, canCreate, asAdmin, refresh, logout } = useSession()
-
-const isGuard = computed(() => role.value === 'Security_guard')
+const { session, roleLabel, canCreate, asAdmin, isGuard, canScan, refresh, logout } = useSession()
 
 onMounted(() => {
   refresh()

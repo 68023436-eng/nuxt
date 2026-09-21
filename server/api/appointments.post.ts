@@ -103,13 +103,14 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const { data: patient, error: patientErr } = await client
       .from('hospital_user')
-      .select('user_id, full_name, phone_number, role, is_active')
+      .select('user_id, full_name, phone_number, role, roles, is_active')
       .eq('user_id', patientUserId)
       .single()
 
     const p = patient as any
 
-    if (p?.role !== 'Patient'){
+    const pRoles: string[] = Array.isArray(p?.roles) && p.roles.length ? p.roles : [p?.role].filter(Boolean)
+    if (!pRoles.includes('Patient')) {
       throw createError({
         statusCode: 400,
         statusMessage: 'บัญชีที่เลือกไม่ใช่ผู้ป่วย (Patient)',
