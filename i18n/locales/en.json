@@ -14,16 +14,16 @@
   "access": {
     "title": "Access Control",
     "subtitle": "Hospital Appointment & Parking Access",
-    "desc": "Identify yourself with name, phone number and select a role",
+    "desc": "Identify yourself with name and phone number",
     "usernameLabel": "Username",
     "usernamePlaceholder": "First-Last name",
     "phoneLabel": "Phone number",
     "phonePlaceholder": "e.g. 0909009090",
-    "roleLabel": "Select role",
     "signingIn": "Checking credentials...",
     "signIn": "Sign in",
-    "staffNote": "Staff must use a name that matches the system records",
-    "loginFailed": "Sign in failed. Please try again"
+    "staffNote": "Name and phone must match a registered account in the system",
+    "loginFailed": "Sign in failed. Please try again",
+    "roleDetectHint": "Your access level and role are detected automatically from your account — no need to select a role"
   },
   "common": {
     "loading": "Loading...",

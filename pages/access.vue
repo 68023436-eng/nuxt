@@ -75,34 +75,9 @@
             <p v-if="fieldError.phone_number" class="tw-text-xs tw-text-red-500 tw-mt-1">{{ fieldError.phone_number }}</p>
           </div>
 
-          <!-- ปุ่มเลือกบทบาท (Role Selector) -->
-          <div>
-            <label class="tw-block tw-text-xs sm:tw-text-sm tw-font-semibold tw-text-gray-700 tw-mb-1.5">
-              {{ $t('access.roleLabel') }} <span class="tw-text-red-500">*</span>
-            </label>
-            <div class="tw-grid tw-grid-cols-2 tw-gap-2 sm:tw-gap-2.5" role="radiogroup" :aria-label="$t('access.roleLabel')">
-              <button
-                v-for="opt in roleOptions"
-                :key="opt.value"
-                type="button"
-                role="radio"
-                :aria-checked="form.role === opt.value"
-                :class="[
-                  'tw-relative tw-rounded-xl tw-border tw-p-2.5 sm:tw-p-3 tw-text-left tw-transition-all tw-flex tw-flex-col tw-gap-1',
-                  form.role === opt.value
-                    ? `tw-bg-gradient-to-br ${ROLE_COLORS[opt.value]} tw-border-transparent tw-text-white tw-shadow-md`
-                    : 'tw-bg-white tw-border-slate-200 tw-text-gray-700 hover:tw-border-emerald-300 hover:tw-bg-emerald-50/40',
-                ]"
-                @click="form.role = opt.value"
-              >
-                <span v-if="form.role === opt.value" class="tw-absolute tw-top-2 tw-right-2 tw-text-white tw-text-xs">✓</span>
-                <span class="tw-text-base sm:tw-text-lg">{{ ROLE_ICONS[opt.value] }}</span>
-                <span class="tw-font-semibold tw-text-xs sm:tw-text-sm tw-leading-tight">{{ opt.label }}</span>
-                <span :class="['tw-text-[10px] sm:tw-text-xs tw-line-clamp-1', form.role === opt.value ? 'tw-text-white/90' : 'tw-text-slate-400']">
-                  {{ opt.desc }}
-                </span>
-              </button>
-            </div>
+          <!-- หมายเหตุ: ระบบตรวจสอบสิทธิ์จากบัญชีในระบบโดยอัตโนมัติ -->
+          <div class="tw-bg-emerald-50 tw-border tw-border-emerald-200 tw-rounded-xl tw-p-3 tw-text-[11px] sm:tw-text-xs tw-text-emerald-700 tw-leading-relaxed">
+            {{ $t('access.roleDetectHint') }}
           </div>
 
           <!-- ปุ่มกดยืนยัน (Submit Button) -->
@@ -111,7 +86,7 @@
             :disabled="isSubmitting"
             class="tw-w-full tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-semibold tw-py-3 sm:tw-py-3.5 tw-rounded-xl tw-shadow-md hover:tw-shadow-lg tw-transition-all tw-text-sm sm:tw-text-base tw-mt-2"
           >
-            {{ isSubmitting ? $t('access.signingIn') :$t('access.signIn') }}
+            {{ isSubmitting ? $t('access.signingIn') : $t('access.signIn') }}
           </button>
         </form>
 
@@ -125,19 +100,15 @@
 </template>
 
 <script setup>
-import { ROLE_COLORS, ROLE_ICONS } from '~/constants/roles'
-
 definePageMeta({
   middleware: false,
 })
 
 const { login, refresh } = useSession()
-const roleOptions = useRoleOptions()
 
 const form = reactive({
   full_name: '',
   phone_number: '',
-  role: 'Patient',
 })
 
 const isSubmitting = ref(false)
@@ -151,7 +122,7 @@ const clearFieldError = (field) => {
   }
 }
 
-// นำทางตามบทบาท (รปภ. ไปหน้า verify / ส่วนที่เหลือไปหน้าหลัก)
+// นำทางตามบทบาทที่ได้จากบัญชี (รปภ. ไปหน้า verify / ส่วนที่เหลือไปหน้าหลัก)
 const homePathFor = (role) => (role === 'Security_guard' ? '/verify' : '/')
 
 // มี Session ค้างอยู่ ให้พาไปหน้าหลักทันที
@@ -168,7 +139,11 @@ const handleLogin = async () => {
   isSubmitting.value = true
 
   try {
-    const s = await login({ ...form })
+    // ส่งแค่ ชื่อ + เบอร์ — ระบบหาบัญชีและ role ให้เอง
+    const s = await login({
+      full_name: form.full_name,
+      phone_number: form.phone_number,
+    })
     navigateTo(homePathFor(s?.role))
   } catch (error) {
     errorMsg.value = error?.data?.statusMessage || error?.message || 'เข้าสู่ระบบไม่สำเร็จ'

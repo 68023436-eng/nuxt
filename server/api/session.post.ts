@@ -1,167 +1,99 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { ROLE_PERMISSIONS } from '~/constants/roles'
-import { collapseSpaces, composeFullName, normalizeNameForMatch, normalizeNameForMatchNoSpaces, normalizePhone } from '~/utils/name'
+import { collapseSpaces, composeFullName, normalizeNameForMatch, normalizePhone } from '~/utils/name'
 
 /**
  * POST /api/session
- * "Login" แบบไม่ใช้รหัสผ่าน — ระบุตัวตนด้วย ชื่อ + เบอร์โทร + role (switch button)
- * - เจ้าหน้าที่ (Admin/Clinic_staff/Security_guard): ชื่อ + เบอร์โทร + role ต้องตรงกับแถวใน hospital_user
- * - Patient: ผู้ป่วยทั่วไป เลือกได้อิสระ (ไม่ต้องมีใน hospital_user)
- * หมายเหตุ: ชื่อจะถูก normalize (trim + ลบช่องว่างซ้อน) ก่อนเก็บใน session
+ * "Login" แบบไม่ใช้รหัสผ่าน — ระบุตัวตนด้วย ชื่อ + เบอร์โทร เท่านั้น
+ *
+ * ระบบจะค้นหาบัญชีใน hospital_user ที่มี ชื่อ + เบอร์ ตรงกัน (ทุกบทบาท)
+ * แล้วเข้าใช้งานด้วย role + ชื่อของบัญชีนั้นโดยอัตโนมัติ (ไม่มีปุ่มเลือกบทบาท)
+ *
+ * หมายเหตุ:
+ *   - เปรียบเทียบชื่อแบบทนทาน (ตัดคำนำหน้า, ไม่สนใจตัวพิมพ์/ช่องว่างซ้อน)
+ *   - เบอร์ 1 เบอร์ ผูกได้แค่ 1 บัญชี (unique index ใน hospital_user)
  */
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) || {}
-    const role = body.role
 
-    // 1. ตรวจ role เบื้องต้น
-    if (!isAccessRole(role)) {
-      throw createError({ statusCode: 400, statusMessage: 'กรุณาเลือกบทบาท (role) ที่ถูกต้อง' })
+    let fullName = typeof body.full_name === 'string' ? collapseSpaces(body.full_name) : ''
+
+    if (!fullName) {
+      const firstName = typeof body.first_name === 'string' ? collapseSpaces(body.first_name) : ''
+      const lastName = typeof body.last_name === 'string' ? collapseSpaces(body.last_name) : ''
+      if (firstName && lastName) {
+        fullName = composeFullName(firstName, lastName)
+      }
     }
 
-    let session: AccessSession
-    let matchedUserId: string | null = null
+    const phoneInput = typeof body.phone_number === 'string' ? body.phone_number.trim() : ''
+    const phoneNumber = normalizePhone(phoneInput)
 
+    if (!fullName) {
+      throw createError({ statusCode: 400, statusMessage: 'กรุณากรอกชื่อและนามสกุล' })
+    }
+    if (fullName.length > 100) {
+      throw createError({ statusCode: 400, statusMessage: 'ชื่อ-นามสกุลต้องไม่เกิน 100 ตัวอักษร' })
+    }
+    if (!phoneNumber || !/^\d{9,10}$/.test(phoneNumber)) {
+      throw createError({ statusCode: 400, statusMessage: 'กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง (9-10 หลัก)' })
+    }
 
+    const client = await serverSupabaseClient(event)
+    const { data: users, error: userErr } = await client
+      .from('hospital_user')
+      .select('user_id, full_name, role, phone_number, is_active')
 
-    if (role === 'Patient') {
-      // ============ Patient Login ============
-      let fullName = typeof body.full_name === 'string' ? collapseSpaces(body.full_name) : ''
-      
-      if (!fullName){
-        const firstName = typeof body.first_name === 'string' ? collapseSpaces(body.first_name) : ''
-        const lastName = typeof body.last_name === 'string' ? collapseSpaces(body.last_name) : ''
-        if(firstName && lastName) {
-          fullName = composeFullName(firstName, lastName)
-        }
-      }
-
-      const phoneInput = typeof body.phone_number === 'string' ? body.phone_number.trim() : ''
-      const phoneNumber = normalizePhone(phoneInput)
-
-      if (!fullName) {
-        throw createError({ statusCode: 400, statusMessage: 'กรุณากรอกชื่อและนามสกุล' })
-      }
-
-      const client = await serverSupabaseClient(event)
-      const { data: patients, error: err } = await client
-        .from('hospital_user')
-        .select('user_id, full_name, phone_number, is_active')
-        .eq('role', 'Patient')
-
-      if (err) {
-        console.error('Hospital patient lookup error:', err.message)
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์ กรุณาลองใหม่อีกครั้ง',
-        })
-      }
-
-      // Req 8-10: ชื่อ + นามสกุล + เบอร์ ต้องมาจาก Account เดียวกัน
-      // (เทียบชื่อแบบไม่สนใจช่องว่าง — เบอร์เป็นตัวแยก Account ที่ชื่อซ้ำกัน)
-      const nameKey = normalizeNameForMatchNoSpaces(fullName)
-      const matched = (patients || []).find((p: any) => {
-        if (normalizeNameForMatchNoSpaces(p.full_name) !== nameKey) return false
-        if (!p.phone_number || normalizePhone(p.phone_number) !== phoneNumber) return false
-        return true
+    if (userErr) {
+      console.error('Hospital user lookup error:', userErr.message)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์ กรุณาลองใหม่อีกครั้ง',
       })
-
-      if (!matched) {
-        // Req: ชื่อ/นามสกุล/เบอร์ ไม่ตรง → 401 ไม่สร้าง session
-        throw createError({ statusCode: 401, statusMessage: 'ไม่มีบัญชีผู้ใช้นี้' })
-      }
-
-      const m = matched as any
-
-      if (m.is_active === false) {
-        throw createError({ statusCode: 401, statusMessage: 'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่' })
-      }
-
-      session = {
-        full_name: m.full_name,
-        phone_number: m.phone_number || '',
-        role,
-        user_id: m.user_id,
-        iat: Math.floor(Date.now() / 1000),
-      }
-    } else {
-
-
-
-     // ============ Staff Login ============
-      let fullName = typeof body.full_name === 'string' ? collapseSpaces(body.full_name) : ''
-
-      if (!fullName){
-        const firstName = typeof body.first_name === 'string' ? collapseSpaces(body.first_name) : ''
-        const lastName = typeof body.last_name === 'string' ? collapseSpaces(body.last_name) : ''
-        if(firstName && lastName) {
-          fullName = composeFullName(firstName, lastName)
-        }
-      }
-
-      const phoneNumber = typeof body.phone_number === 'string' ? body.phone_number.trim() : ''
-
-      if(!fullName){
-        throw createError({statusCode: 400, statusMessage: 'กรุณากรอกชื่อและนามสกุล'})
-      }
-      if (fullName.length > 100) {
-        throw createError({ statusCode: 400, statusMessage: 'ชื่อ-นามสกุลต้องไม่เกิน 100 ตัวอักษร' })
-      }
-      if (!/^\d{9,10}$/.test(phoneNumber)) {
-        throw createError({ statusCode: 400, statusMessage: 'เบอร์โทรศัพท์ต้องเป็นตัวเลข 9-10 หลัก' })
-      }
-
-      const client = await serverSupabaseClient(event)
-      const { data: users, error: userErr } = await client
-        .from('hospital_user')
-        .select('user_id, full_name, role, phone_number')
-        .eq('role', role)
-        .or('is_active.is.null,is_active.eq.true')
-
-      if (userErr) {
-        console.error('Hospital user lookup error:', userErr.message)
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์ กรุณาลองใหม่อีกครั้ง',
-        })
-      }
-      // เปรียบเทียบชื่อแบบทนทาน: เทียบ case, ตัด space ยาว, ตัดคำนำหน้า (นางสาว/นาย/นาง)
-      const matched = (users || []).find(
-        (u: any) => normalizeNameForMatch(u.full_name) === normalizeNameForMatch(fullName)
-      )
-
-      if (!matched) {
-        throw createError({
-          statusCode: 401,
-          statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ หรือเลือกบทบาทเจ้าหน้าที่ผิดพลาด',
-        })
-      }
-
-      // ตรวจเบอร์โทร: ชื่อและเบอร์ต้องตรงกับข้อมูลในระบบ (ถ้าในระบบมีเบอร์)
-      const storedPhone = typeof (matched as any)?.phone_number === 'string'
-        ? (matched as any).phone_number.replace(/[\s-]/g, '')
-        : ''
-
-      const inputPhone = (phoneNumber || '').replace(/[\s-]/g, '') // ดึงตัวแปรนี้กลับมา
-
-      if (!storedPhone || storedPhone !== inputPhone) {
-        throw createError({
-          statusCode: 401,
-          statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ หรือเลือกบทบาทเจ้าหน้าที่ผิดพลาด',
-        })
-      }
-
-      matchedUserId = (matched as any).user_id || null
-      session = {
-        full_name: fullName,
-        phone_number: phoneNumber,
-        role,
-        user_id: (matchedUserId || undefined) as any,
-        iat: Math.floor(Date.now() / 1000),
-      }
     }
 
+    // 1) หาบัญชีจากเบอร์โทรที่ตรงกัน (normalize ทั้งสองฝั่ง — กันเบอร์ที่จัดรูปแบบต่างกัน)
+    const byPhone = (users || []).find(
+      (u: any) => u.phone_number && normalizePhone(u.phone_number) === phoneNumber
+    )
 
+    if (!byPhone) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'ไม่พบชื่อและเบอร์โทรนี้ในระบบ กรุณาตรวจสอบอีกครั้ง',
+      })
+    }
+
+    // 2) ตรวจชื่อต้องตรงกับบัญชีของเบอร์นั้น ๆ
+    const nameKey = normalizeNameForMatch(fullName)
+    if (!byPhone.full_name || normalizeNameForMatch(byPhone.full_name) !== nameKey) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'ชื่อและเบอร์โทรไม่ตรงกับข้อมูลในระบบ กรุณาตรวจสอบอีกครั้ง',
+      })
+    }
+
+    // 3) บัญชีถูกปิดใช้งาน → ไม่อนุญาตเข้า
+    if (byPhone.is_active === false) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อเจ้าหน้าที่',
+      })
+    }
+
+    if (!isAccessRole(byPhone.role)) {
+      throw createError({ statusCode: 500, statusMessage: 'บทบาทของบัญชีไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่' })
+    }
+
+    // เข้าใช้งานด้วย role + ชื่อของบัญชีที่ตรงกัน (ไม่ใช้ข้อมูลที่กรอกมา)
+    const session: AccessSession = {
+      full_name: byPhone.full_name,
+      phone_number: byPhone.phone_number || phoneNumber,
+      role: byPhone.role,
+      user_id: byPhone.user_id || undefined,
+      iat: Math.floor(Date.now() / 1000),
+    }
 
     // เซ็นต์ session ลง cookie
     setAccessSession(event, session)
