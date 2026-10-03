@@ -1,5 +1,5 @@
 <template>
-  <div
+<div
     role="group"
     :aria-label="$t('languageSwitcher.label')"
     class="tw-inline-flex tw-items-center tw-gap-1 tw-p-1 tw-rounded-xl tw-bg-slate-100/90 tw-border tw-border-slate-200/80 tw-shadow-inner tw-select-none"
