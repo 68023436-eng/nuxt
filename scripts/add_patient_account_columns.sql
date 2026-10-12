@@ -31,12 +31,8 @@ $$;
 CALL public.ensure_patient_account_columns();
 
 -- จำกัดสิทธิ์เรียก procedure นี้ (DDL migration) ให้เฉพาะผู้ดูแลฐานข้อมูล
-DO $$
-BEGIN
-  BEGIN
-    REVOKE ALL ON PROCEDURE public.ensure_patient_account_columns() FROM PUBLIC;
-    GRANT EXECUTE ON PROCEDURE public.ensure_patient_account_columns() TO postgres;
-  EXCEPTION WHEN others THEN
-    RAISE NOTICE 'skip grant hardening: ensure_patient_account_columns';
-  END;
-END $$;
+REVOKE ALL ON PROCEDURE public.ensure_patient_account_columns() FROM PUBLIC;
+REVOKE ALL ON PROCEDURE public.ensure_patient_account_columns() FROM anon;
+REVOKE ALL ON PROCEDURE public.ensure_patient_account_columns() FROM authenticated;
+REVOKE ALL ON PROCEDURE public.ensure_patient_account_columns() FROM service_role;
+GRANT EXECUTE ON PROCEDURE public.ensure_patient_account_columns() TO postgres;;

@@ -12,8 +12,10 @@ import { RETENTION_DAYS } from '~/constants/appointments'
 export async function purgeExpiredAppointments(event: any) {
   const client = await serverSupabaseClient(event)
 
-  // 1) ใช้ function ใน DB เป็นตัวลบ
-  const { data: purged, error: rpcError } = await (client as any).rpc('purge_expired_appointments')
+  // 1) ใช้ function ใน DB เป็นตัวลบ (ส่งค่า retention จาก constant ให้ตรงกับหน้าเว็บ)
+  const { data: purged, error: rpcError } = await (client as any).rpc('purge_expired_appointments', {
+    p_retention_days: RETENTION_DAYS,
+  })
   if (!rpcError) {
     const count = Number(purged) || 0
     return {

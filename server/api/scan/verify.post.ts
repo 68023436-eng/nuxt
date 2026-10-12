@@ -128,7 +128,33 @@ export default defineEventHandler(async (event) => {
         p_result: result,
         p_checked_by: identity,
       })
-      if (logError) console.warn('Scan history rpc failed:', logError.message)
+
+      if (logError) {
+        // fallback กันกรณี DB ยังไม่ได้สร้าง function — insert ผ่าน client โดยตรวจซ้ำ 10 วิแบบเดียวกัน
+        console.warn('Scan history rpc failed, falling back to client-side insert:', logError.message)
+        const { data: recent } = await (client as any)
+          .from('scan_history')
+          .select('id')
+          .eq('method', method)
+          .eq('checked_by', identity)
+          .eq('result', result)
+          .gte('created_at', new Date(Date.now() - 10_000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (!recent || recent.length === 0) {
+          const { error: insertError } = await (client as any).from('scan_history').insert({
+            method,
+            qr_token: qrToken,
+            phone_number: phoneToLog,
+            patient_name: foundRecord?.patient_name ?? null,
+            appointment_id: foundRecord?.appointment_id != null ? Number(foundRecord.appointment_id) : null,
+            result,
+            checked_by: identity,
+          })
+          if (insertError) console.warn('Scan history fallback insert failed:', insertError.message)
+        }
+      }
     } catch (logError: any) {
       console.warn('Scan history insert skipped:', logError?.message || logError)
     }

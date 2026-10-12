@@ -610,8 +610,11 @@ const confirmBatchDelete = async () => {
     const count = res?.count || 0
 
     const deletedSet = new Set(idsToDelete)
+    const deletedAtMap = new Map((res?.data || []).map(r => [r.appointment_id, r.deleted_at]))
     appointments.value = appointments.value.map(item =>
-      deletedSet.has(item.appointment_id) ? { ...item, status: 'cancelled' } : item
+      deletedSet.has(item.appointment_id)
+        ? { ...item, status: 'cancelled', deleted_at: deletedAtMap.get(item.appointment_id) ?? item.deleted_at ?? new Date().toISOString() }
+        : item
     )
 
     selectedIds.value = selectedIds.value.filter(id => !deletedSet.has(id))

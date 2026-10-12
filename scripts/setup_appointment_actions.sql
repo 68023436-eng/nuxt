@@ -18,9 +18,9 @@ BEGIN
   RETURN QUERY
     UPDATE public.appointments
        SET status = 'cancelled',
-           deleted_at = COALESCE(deleted_at, NOW())
-     WHERE appointment_id = ANY(p_ids)
-    RETURNING appointment_id, deleted_at;
+           deleted_at = COALESCE(public.appointments.deleted_at, NOW())
+     WHERE public.appointments.appointment_id = ANY(p_ids)
+    RETURNING public.appointments.appointment_id::BIGINT, public.appointments.deleted_at;
 END;
 $$;
 
@@ -39,7 +39,7 @@ BEGIN
     UPDATE public.appointments
        SET status = 'backup',
            deleted_at = NULL
-     WHERE appointment_id = ANY(p_ids)
-    RETURNING appointment_id;
+     WHERE public.appointments.appointment_id = ANY(p_ids)
+    RETURNING public.appointments.appointment_id::BIGINT;
 END;
 $$;

@@ -53,16 +53,28 @@ export default defineEventHandler(async (event) => {
       { p_ids: [numericId] },
     )
 
+    let row = rows?.[0]
     if (updateError) {
-      console.error('Server soft-delete error:', JSON.stringify(updateError))
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'ไม่สามารถอัปเดตสถานะการลบข้อมูลได้',
-      })
+      // fallback กันกรณี DB ยังไม่ได้สร้าง function — พฤติกรรมเดิม
+      console.warn('set_appointment_cancelled rpc unavailable, falling back to client-side:', updateError.message)
+      const { data: fbRows, error: fbError } = await (client as any)
+        .from('appointments')
+        .update({ status: 'cancelled', deleted_at: new Date().toISOString() })
+        .eq('appointment_id', numericId)
+        .select('appointment_id, deleted_at')
+
+      if (fbError) {
+        console.error('Server soft-delete error:', JSON.stringify(fbError))
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'ไม่สามารถอัปเดตสถานะการลบข้อมูลได้',
+        })
+      }
+      row = fbRows?.[0]
     }
 
-    const row = rows?.[0]
-    const deleteTime = row?.deleted_at ?? new Date().toISOString()
+    // ใช้ค่า deleted_at จาก DB เสมอ (B6) — ไม่ใช้เวลาจาก server อีก
+    const deleteTime = row?.deleted_at ?? null
 
     return {
       success: true,

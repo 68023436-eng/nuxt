@@ -34,26 +34,38 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
 
     // Soft-delete ผ่าน stored function (set status='cancelled' + deleted_at=now)
+    let updated = []
     const { data: rows, error: updateError } = await (client as any).rpc(
       'set_appointment_cancelled',
       { p_ids: numericIds },
     )
 
     if (updateError) {
-      console.error('Server batch delete error:', updateError.message)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'ไม่สามารถลบข้อมูลได้',
-      })
-    }
+      // fallback กันกรณี DB ยังไม่ได้สร้าง function — พฤติกรรมเดิม
+      console.warn('set_appointment_cancelled rpc unavailable, falling back to client-side:', updateError.message)
+      const { data: fbRows, error: fbError } = await (client as any)
+        .from('appointments')
+        .update({ status: 'cancelled', deleted_at: new Date().toISOString() })
+        .in('appointment_id', numericIds)
+        .select('appointment_id, deleted_at')
 
-    const updated = rows || []
+      if (fbError) {
+        console.error('Server batch delete error:', fbError.message)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'ไม่สามารถลบข้อมูลได้',
+        })
+      }
+      updated = (fbRows || []).map((r: any) => ({ appointment_id: r.appointment_id, deleted_at: r.deleted_at }))
+    } else {
+      updated = (rows || []).map((r: any) => ({ appointment_id: r.appointment_id, deleted_at: r.deleted_at }))
+    }
 
     return {
       success: true,
       count: updated.length,
       retention_days: RETENTION_DAYS,
-      data: updated.map((r: any) => ({ appointment_id: r.appointment_id })),
+      data: updated,
       message: `ลบข้อมูลสำเร็จ ${updated.length} รายการ (เก็บในประวัติ ${RETENTION_DAYS} วัน)`,
     }
   } catch (err: any) {
