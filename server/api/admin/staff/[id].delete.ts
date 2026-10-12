@@ -31,12 +31,12 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'ไม่พบเจ้าหน้าที่' })
     }
 
-    // ห้ามลบบัญชีตัวเอง
-    const isSelf = existing.full_name === adminSession.full_name && existing.role === adminSession.role
+    // ห้ามลบบัญชีตัวเอง (เช็คด้วย user_id — กันมั่วจากบัญชีหลายบทบาท)
+    const target = existing as any
+    const isSelf = String(target?.user_id) === String(adminSession?.user_id)
     if (isSelf) {
       throw createError({ statusCode: 403, statusMessage: 'ไม่สามารถลบบัญชีของตัวเองได้' })
     }
-
     // ลบ auth user (ON DELETE CASCADE จะลบแถวใน hospital_user ตามไปด้วย)
     const { error: authErr } = await serviceClient.auth.admin.deleteUser(id)
     if (authErr) {

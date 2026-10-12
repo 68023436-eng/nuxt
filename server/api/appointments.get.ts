@@ -1,5 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { RETENTION_DAYS } from '~/constants/appointments'
+import type { AccessRole } from '~/constants/roles'
 
 /**
  * สถานะแสดงผลของการนัดหมาย — คำนวณจากข้อมูลจริง (ไม่เก็บใน DB)
@@ -36,15 +37,10 @@ function deriveAppointmentStatus(item: any, todayKey: string, usedAppointmentIds
  */
 export default defineEventHandler(async (event) => {
   try {
-    const { role, ...session } = requirePermission(event, 'view')
-
-    // รปภ. ต้องไม่เห็นข้อมูลนัดหมาย/ผู้ป่วย
-    if (role === 'Security_guard') {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'บทบาทของคุณไม่มีสิทธิ์เข้าถึงข้อมูลนัดหมาย (เฉพาะหน้า ตรวจสอบ QR / ประวัติการตรวจสอบ)',
-      })
-    }
+    const session = requirePermission(event, 'view')
+    // สิทธิ์/ขอบเขตดูข้อมูล = พิจารณาจากทุกบทบาทที่บัญชีมี (union) ไม่ใช่บทบาทหลัก
+    const userRoles: AccessRole[] = session.roles?.length ? session.roles : [session.role]
+    const isStaffView = userRoles.some((r) => r === 'Admin' || r === 'Clinic_staff')
 
     const client = await serverSupabaseClient(event)
     const retentionDays = RETENTION_DAYS
@@ -66,11 +62,13 @@ export default defineEventHandler(async (event) => {
         deleted_at,
         dept_id,
         location_id,
-        department:hospital_dept(dept_name_th),
+        department:hospital_dept(dept_name_th, dept_name_en),
         location:hospital_parking(building_name)
       `)
 
-    if (role === 'Patient') {
+    if (isStaffView) {
+      // Admin / Clinic_staff (หรือรวมกับบทบาทอื่น) → เห็นทั้งหมด
+    } else if (userRoles.includes('Patient')) {
       // Patient ดูได้เฉพาะนัดของตัวเองเท่านั้น
       // ผูกเจ้าของจาก session.user_id (account ที่สร้างไว้) — ไม่รับ user_id/patient_id จาก client
       // (Req 10: ผู้ป่วยเห็นเฉพาะนัดของตัวเอง ผูกจาก Account ไม่สามารถแก้จาก URL ได้)
@@ -78,6 +76,12 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 403, statusMessage: 'ไม่สามารถระบุบัญชีผู้ป่วยได้ กรุณาเข้าสู่ระบบใหม่' })
       }
       query.eq('user_id', session.user_id)
+    } else {
+      // รปภ. อย่างเดียว → ต้องไม่เห็นข้อมูลนัดหมาย/ผู้ป่วย
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'บทบาทของคุณไม่มีสิทธิ์เข้าถึงข้อมูลนัดหมาย (เฉพาะหน้า ตรวจสอบ QR / ประวัติการตรวจสอบ)',
+      })
     }
 
     const { data, error } = await query.order('created_at', { ascending: false })
@@ -108,7 +112,7 @@ export default defineEventHandler(async (event) => {
         .eq('result', 'valid')
       if (usedRows && usedRows.length > 0) {
         for (const row of usedRows) {
-          const id = String(row?.appointment_id ?? '').trim()
+          const id = String((row as any)?.appointment_id ?? '').trim()
           if (id && id !== 'null') usedAppointmentIds.add(id)
         }
       }
@@ -122,15 +126,20 @@ export default defineEventHandler(async (event) => {
     const RETENTION_MS = retentionDays * 24 * 60 * 60 * 1000
 
     // แปลงผล embed ให้เป็นฟิลด์ตรงๆ ที่หน้าเว็บใช้ (department_name, building_name)
-    // พร้อมแนบ days_until_purge ตาม clock ของเซิร์ฟเวอร์ (หน้า history แสดง "เหลือ X วัน")
-    return (data || []).map((item: any) => {
-      const flat = {
-        ...item,
-        department_name: item.department?.dept_name_th || item.department?.[0]?.dept_name_th || null,
-        building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
-        department: undefined,
-        location: undefined,
-      }
+    // พร้อมกรองรายการที่ deleted_at เกิน 30 วันออก (ข้อมูลถูกลบถาวรแล้ว)
+    const filtered = (data || []).map((item: any) => ({
+      ...item,
+      department_name: (getCookie(event, 'hc_locale') === 'en'
+        ? (item.department?.dept_name_en || item.department?.[0]?.dept_name_en)
+        : (item.department?.dept_name_th || item.department?.[0]?.dept_name_th)) || null,
+      building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
+      department: undefined,
+      location: undefined,
+    })).filter((item: any) => {
+      if (!item.deleted_at) return true
+      const deletedTime = new Date(item.deleted_at).getTime()
+      return now - deletedTime < RETENTION_MS
+    })
 
     // แนบเหลือวันที่จะถูกลบถาวร เพื่อให้หน้าเว็บแสดง "เหลือ X วัน"
     // และแนบ display_status (สถานะ 4 แบบคำนวณจากข้อมูลจริง)
@@ -139,10 +148,10 @@ export default defineEventHandler(async (event) => {
         const elapsed = now - new Date(item.deleted_at).getTime()
         item.days_until_purge = Math.max(0, Math.ceil((RETENTION_MS - elapsed) / (24 * 60 * 60 * 1000)))
       } else {
-        flat.days_until_purge = null
+        item.days_until_purge = null
       }
-
-      return flat
+      item.display_status = deriveAppointmentStatus(item, todayKey, usedAppointmentIds)
+      return item
     })
   } catch (err: any) {
     if (err.statusCode) throw err

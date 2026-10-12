@@ -74,17 +74,18 @@ export default defineEventHandler(async (event) => {
     }
 
     // --- 2) Insert hospital_user role='Patient' (ไม่เก็บ password) ---
-    const { data, error } = await client
+    const { data, error } = await (serviceClient as any)
       .from('hospital_user')
       .insert({
         user_id: authData.user.id,
         full_name: fullName,
         role: 'Patient',
+        roles: ['Patient'],
         phone_number: phoneNumber,
         email: fakeEmail,
         is_active: true,
       })
-      .select('user_id, full_name, role, phone_number, is_active')
+      .select('user_id, full_name, role, roles, phone_number, is_active')
       .single()
 
     if (error) {
