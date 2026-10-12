@@ -22,3 +22,15 @@ WHERE cardinality(roles) = 0;
 
 -- 3) (Optional) บังคับว่า role หลัก ต้องตรงกับ roles[1] เสมอ
 --    ใช้ได้เฉพาะที่ไม่มี data ที่ขัดแย้ง — ควรยิงผ่าน UPDATE เองในแอป
+
+-- 4) Stored Procedure: เรียกซ้ำได้ตอนไหนก็ได้ผ่าน CALL
+--    CALL public.backfill_user_roles();  -- ทำงานเหมือน ข้อ 2) ทุกประการ
+CREATE OR REPLACE PROCEDURE public.backfill_user_roles()
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE public.hospital_user
+  SET roles = ARRAY[role]
+  WHERE cardinality(roles) = 0;
+END;
+$$;

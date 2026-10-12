@@ -6,9 +6,35 @@ import { RETENTION_DAYS } from '~/constants/appointments'
 
 export const useAppointment = () => {
   const { t, locale } = useSafeI18n()
+  const { session } = useSession()
 
   // แปลงรหัสภาษา (th/en) เป็น Intl locale ที่ใช้จัดรูปแบบวันที่
   const intlLocale = computed(() => (locale.value === 'en' ? 'en-US' : 'th-TH'))
+
+  // วันนี้ตาม server (Asia/Bangkok) — fallback เป็นวันที่เครื่องถ้าอ่านไม่ได้
+  const todayKey = computed(() => {
+    const fromServer = session.value?.server_today
+    if (fromServer) return String(fromServer)
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  })
+
+  /**
+   * เรียงนัดตามกำหนดการ (ใช้ร่วมกันทุกส่วน):
+   *   1) นัดที่ยังไม่ถึง/ถึงวันนี้ (อนาคต) มาก่อน — เรียงจากวันที่ใกล้วันนี้ที่สุด → ไกลที่สุด
+   *   2) ต่อด้วยนัดที่ผ่านมาแล้ว (อดีต) — เรียงจากวันที่เก่าสุด → ล่าสุด
+   */
+  const sortBySchedule = <T extends { appointment_date?: string | null }>(items: T[]): T[] => {
+    const today = todayKey.value
+    return [...(items || [])].sort((a, b) => {
+      const da = String(a?.appointment_date || '')
+      const db = String(b?.appointment_date || '')
+      const aFuture = da >= today
+      const bFuture = db >= today
+      if (aFuture !== bFuture) return aFuture ? -1 : 1
+      return da.localeCompare(db)
+    })
+  }
 
   /** สีของ badge ตามสถานะ */
   const statusClass = (status: string): string => {
@@ -90,5 +116,6 @@ export const useAppointment = () => {
     formatDateTime,
     daysUntilPurge,
     purgeNotice,
+    sortBySchedule,
   }
 }

@@ -33,12 +33,11 @@ export default defineEventHandler(async (event) => {
 
     const client = await serverSupabaseClient(event)
 
-    // กู้คืนทุก id พร้อมกันใน query เดียว (set status='backup' + ล้าง deleted_at)
-    const { data: updated, error: updateError } = await (client as any)
-      .from('appointments')
-      .update({ status: 'backup', deleted_at: null })
-      .in('appointment_id', numericIds)
-      .select('appointment_id')
+    // กู้คืนทุก id พร้อมกันผ่าน stored function (set status='backup' + ล้าง deleted_at)
+    const { data: rows, error: updateError } = await (client as any).rpc(
+      'restore_appointments',
+      { p_ids: numericIds },
+    )
 
     if (updateError) {
       console.error('Server batch restore error:', updateError.message)
@@ -48,11 +47,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const updated = rows || []
+
     return {
       success: true,
-      count: updated?.length || 0,
-      data: updated || [],
-      message: `กู้คืนข้อมูลสำเร็จ ${updated?.length || 0} รายการ (สถานะ: ข้อมูล backup)`,
+      count: updated.length,
+      data: updated.map((r: any) => ({ appointment_id: r.appointment_id })),
+      message: `กู้คืนข้อมูลสำเร็จ ${updated.length} รายการ (สถานะ: ข้อมูล backup)`,
     }
   } catch (err: any) {
     if (err.statusCode) throw err

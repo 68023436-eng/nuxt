@@ -48,3 +48,49 @@ ON public.scan_history
 FOR INSERT 
 TO authenticated 
 WITH CHECK (true);
+
+-- ===================================================
+-- Function: บันทึกผลการตรวจสอบของ รปภ. ลง scan_history
+-- (ใช้แทนโค้ด insert + ตรวจซ้ำใน server — รูปแบบ function ใน DB)
+--  - ถ้ามีรายการเดียวกันใน 10 วินาทีหลัง → คืน NULL (ข้าม ไม่บันทึกซ้ำ)
+--  - สำเร็จ → คืน id แถวใหม่
+-- ===================================================
+CREATE OR REPLACE FUNCTION public.log_scan_attempt(
+  p_method TEXT,
+  p_qr_token TEXT,
+  p_phone_number TEXT,
+  p_patient_name TEXT,
+  p_appointment_id BIGINT,
+  p_result TEXT,
+  p_checked_by TEXT
+)
+RETURNS BIGINT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_existing_id BIGINT;
+  v_new_id BIGINT;
+BEGIN
+  SELECT id INTO v_existing_id
+    FROM public.scan_history
+   WHERE method = p_method
+     AND checked_by = p_checked_by
+     AND result = p_result
+     AND created_at >= NOW() - INTERVAL '10 seconds'
+     AND CASE WHEN p_method = 'qr' THEN qr_token = p_qr_token ELSE phone_number = p_phone_number END
+   LIMIT 1;
+
+  IF v_existing_id IS NOT NULL THEN
+    RETURN NULL;
+  END IF;
+
+  INSERT INTO public.scan_history
+    (method, qr_token, phone_number, patient_name, appointment_id, result, checked_by)
+  VALUES
+    (p_method, p_qr_token, p_phone_number, p_patient_name, p_appointment_id, p_result, p_checked_by)
+  RETURNING id INTO v_new_id;
+
+  RETURN v_new_id;
+END;
+$$;

@@ -117,34 +117,18 @@ export default defineEventHandler(async (event) => {
 
     const identity = `${session.full_name} ${session.phone_number}`.trim()
 
-    // บันทึกลงประวัติ scan_history
+    // บันทึกลงประวัติ scan_history ผ่าน stored function (ตรวจซ้ำ 10 วิ + insert ใน DB)
     try {
-      const dupQ = (client as any)
-        .from('scan_history')
-        .select('id')
-        .eq('method', method)
-        .eq('checked_by', identity)
-        .eq('result', result)
-        .gte('created_at', new Date(Date.now() - 10_000).toISOString())
-      if (method === 'qr') {
-        dupQ.eq('qr_token', qrToken)
-      } else {
-        dupQ.eq('phone_number', phoneNumber)
-      }
-      const { data: dups } = await dupQ.limit(1)
-      if (!dups || dups.length === 0) {
-        await (client as any)
-          .from('scan_history')
-          .insert({
-            method,
-            qr_token: qrToken,
-            phone_number: phoneToLog,
-            patient_name: foundRecord?.patient_name ?? null,
-            appointment_id: foundRecord?.appointment_id != null ? String(foundRecord.appointment_id) : null,
-            result,
-            checked_by: identity,
-          })
-      }
+      const { error: logError } = await (client as any).rpc('log_scan_attempt', {
+        p_method: method,
+        p_qr_token: qrToken,
+        p_phone_number: phoneToLog,
+        p_patient_name: foundRecord?.patient_name ?? null,
+        p_appointment_id: foundRecord?.appointment_id != null ? Number(foundRecord.appointment_id) : null,
+        p_result: result,
+        p_checked_by: identity,
+      })
+      if (logError) console.warn('Scan history rpc failed:', logError.message)
     } catch (logError: any) {
       console.warn('Scan history insert skipped:', logError?.message || logError)
     }
