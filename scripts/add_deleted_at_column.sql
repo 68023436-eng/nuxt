@@ -17,3 +17,25 @@ WHERE deleted_at IS NOT NULL;
 -- UPDATE appointments
 -- SET deleted_at = NOW()
 -- WHERE status = 'cancelled' AND deleted_at IS NULL;
+
+-- ===================================================
+-- Trigger: ตี deleted_at อัตโนมัติเมื่อสถานะกลายเป็น 'cancelled'
+-- (Soft-delete อัตโนมัติแม้โค้ดแอปส่งแค่ status มา แล้วลืมส่ง deleted_at)
+-- ===================================================
+CREATE OR REPLACE FUNCTION public.appointments_set_deleted_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.status = 'cancelled' AND NEW.deleted_at IS NULL THEN
+    NEW.deleted_at := NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_appointments_soft_delete ON public.appointments;
+CREATE TRIGGER trg_appointments_soft_delete
+  BEFORE UPDATE OF status ON public.appointments
+  FOR EACH ROW
+  EXECUTE FUNCTION public.appointments_set_deleted_at();

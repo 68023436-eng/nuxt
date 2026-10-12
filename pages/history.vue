@@ -192,7 +192,7 @@
                     <div class="tw-flex tw-items-center tw-gap-2">
                       <span class="tw-text-xs tw-font-bold tw-text-slate-400">#{{ index + 1 }}</span>
                       <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2 tw-py-0.5 tw-rounded tw-text-xs">
-                        {{ item.license_plate }}
+                        {{ item.phone_number || '-' }}
                       </span>
                     </div>
                     <span :class="statusClass(item.display_status || item.status)" class="tw-px-2.5 tw-py-0.5 tw-rounded-full tw-text-xs tw-font-medium">
@@ -223,7 +223,7 @@
                     <tr>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-12">{{ $t('history.tableNo') }}</th>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.tablePatient') }}</th>
-                      <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[130px]">{{ $t('history.tablePlate') }}</th>
+                      <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[130px]">{{ $t('history.tablePhone') }}</th>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.tableDept') }}</th>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[180px]">{{ $t('history.tableDateTime') }}</th>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[110px]">{{ $t('history.tableStatus') }}</th>
@@ -239,11 +239,10 @@
                       <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
                       <td class="tw-px-4 lg:tw-px-5 tw-py-4">
                         <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[190px]" :title="item.patient_name">{{ item.patient_name }}</div>
-                        <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</div>
                       </td>
                       <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-whitespace-nowrap">
                         <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
-                          {{ item.license_plate }}
+                          {{ item.phone_number || '-' }}
                         </span>
                       </td>
                       <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-700">
@@ -294,7 +293,7 @@
                     <div class="tw-flex tw-items-center tw-gap-2">
                       <span class="tw-text-xs tw-font-bold tw-text-slate-400">#{{ index + 1 }}</span>
                       <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2 tw-py-0.5 tw-rounded tw-text-xs">
-                        {{ item.license_plate }}
+                        {{ item.phone_number || '-' }}
                       </span>
                     </div>
                     <span :class="statusClass(item.display_status || item.status)" class="tw-px-2.5 tw-py-0.5 tw-rounded-full tw-text-xs tw-font-medium">
@@ -325,7 +324,7 @@
                     <tr>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-12">{{ $t('history.tableNo') }}</th>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.tablePatient') }}</th>
-                      <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[130px]">{{ $t('history.tablePlate') }}</th>
+                      <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[130px]">{{ $t('history.tablePhone') }}</th>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.tableDept') }}</th>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[180px]">{{ $t('history.tableDateTime') }}</th>
                       <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[110px]">{{ $t('history.tableStatus') }}</th>
@@ -341,11 +340,10 @@
                       <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
                       <td class="tw-px-4 lg:tw-px-5 tw-py-4">
                         <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[190px]" :title="item.patient_name">{{ item.patient_name }}</div>
-                        <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</div>
                       </td>
                       <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-whitespace-nowrap">
                         <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
-                          {{ item.license_plate }}
+                          {{ item.phone_number || '-' }}
                         </span>
                       </td>
                       <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-700">
@@ -501,7 +499,7 @@
                   />
                   <span class="tw-text-xs tw-font-bold tw-text-slate-400">#{{ index + 1 }}</span>
                   <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2 tw-py-0.5 tw-rounded tw-text-xs">
-                    {{ item.license_plate }}
+                    {{ item.phone_number || '-' }}
                   </span>
                 </div>
                 <span :class="statusClass(item.display_status || item.status)" class="tw-px-2.5 tw-py-0.5 tw-rounded-full tw-text-xs tw-font-medium">
@@ -512,7 +510,6 @@
               <!-- ข้อมูลคนไข้ -->
               <div>
                 <p class="tw-font-semibold tw-text-gray-800 tw-text-sm">{{ item.patient_name }}</p>
-                <p class="tw-text-xs tw-text-gray-500 tw-mt-0.5">📞 {{ item.phone_number || '-' }}</p>
                 <p class="tw-text-xs tw-text-teal-700 tw-mt-1">🏥 {{ item.department_name || item.dept_id || '-' }}</p>
               </div>
 
@@ -538,14 +535,6 @@
                 >
                   {{ $t('common.viewDetails') }}
                 </button>
-                <button 
-                  v-if="canRestore"
-                  @click="askRestoreAppointment(item)"
-                  :disabled="restoringId === item.appointment_id"
-                  class="tw-flex-1 tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-300 tw-text-white tw-py-2 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors tw-shadow-sm tw-flex tw-items-center tw-justify-center tw-gap-1"
-                >
-                  <span>{{ restoringId === item.appointment_id ? $t('history.restoring') : $t('history.restoreBtn') }}</span>
-                </button>
               </div>
             </div>
           </div>
@@ -565,7 +554,7 @@
                   </th>
                   <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-12">{{ $t('history.tableNo') }}</th>
                   <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.tablePatient') }}</th>
-                  <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[130px]">{{ $t('history.tablePlate') }}</th>
+                  <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[130px]">{{ $t('history.tablePhone') }}</th>
                   <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700">{{ $t('history.tableDept') }}</th>
                   <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[180px]">{{ $t('history.tableDateTime') }}</th>
                   <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-w-[110px]">{{ $t('history.tableStatus') }}</th>
@@ -593,11 +582,10 @@
                   <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
                   <td class="tw-px-4 lg:tw-px-5 tw-py-4">
                     <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[200px]" :title="item.patient_name">{{ item.patient_name }}</div>
-                    <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</div>
                   </td>
                   <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-whitespace-nowrap">
                     <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
-                      {{ item.license_plate }}
+                      {{ item.phone_number || '-' }}
                     </span>
                   </td>
                   <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-700">
@@ -630,14 +618,6 @@
                         class="tw-bg-blue-500 hover:tw-bg-blue-600 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
                       >
                         {{ $t('common.viewDetails') }}
-                      </button>
-                      <button 
-                        v-if="canRestore"
-                        @click="askRestoreAppointment(item)"
-                        :disabled="restoringId === item.appointment_id"
-                        class="tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-300 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors tw-shadow-sm tw-flex tw-items-center tw-gap-1"
-                      >
-                        <span>{{ restoringId === item.appointment_id ? $t('history.restoring') : $t('history.restoreBtn') }}</span>
                       </button>
                     </div>
                   </td>
@@ -719,17 +699,6 @@
                   </div>
                 </div>
 
-                <!-- ทะเบียนรถยนต์ -->
-                <div class="tw-flex tw-items-start tw-gap-3">
-                  <div class="tw-w-8 tw-h-8 tw-bg-cyan-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
-                    <span class="tw-text-cyan-500 tw-text-sm">🚗</span>
-                  </div>
-                  <div>
-                    <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('history.licensePlate') }}</p>
-                    <p class="tw-text-gray-800 tw-font-semibold tw-text-sm">{{ selectedAppointment.license_plate }}</p>
-                  </div>
-                </div>
-
                 <!-- แผนกตรวจ -->
                 <div class="tw-flex tw-items-start tw-gap-3">
                   <div class="tw-w-8 tw-h-8 tw-bg-teal-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
@@ -804,51 +773,7 @@
       </Transition>
     </Teleport>
 
-    <!-- ======= 2. Restore Confirm Modal ======= -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div 
-          v-if="showRestoreModal" 
-          class="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-p-4"
-        >
-          <div class="tw-fixed tw-inset-0 tw-bg-black/50 tw-backdrop-blur-sm" @click="closeRestoreModal"></div>
-
-          <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-md tw-overflow-hidden tw-transform tw-transition-all tw-max-h-[90vh] tw-overflow-y-auto">
-            <div class="tw-p-5 sm:tw-p-6 tw-text-center">
-              <h3 class="tw-text-base sm:tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">{{ $t('history.restoreConfirmTitle') }}</h3>
-              <p class="tw-text-xs sm:tw-text-sm tw-text-gray-600 tw-mb-4">
-                {{ $t('history.restoreConfirmText', {
-                  name: itemToRestore?.patient_name,
-                  id: itemToRestore?.appointment_id,
-                }) }}
-              </p>
-              <p class="tw-text-xs tw-text-purple-700 tw-bg-purple-50 tw-p-3 tw-rounded-xl tw-border tw-border-purple-200">
-                {{ $t('history.restoreConfirmNote') }}
-              </p>
-            </div>
-
-            <div class="tw-px-5 sm:tw-px-6 tw-py-3.5 sm:tw-py-4 tw-bg-slate-50 tw-border-t tw-border-slate-100 tw-flex tw-flex-col-reverse sm:tw-flex-row tw-justify-end tw-gap-2 sm:tw-gap-3">
-              <button 
-                @click="closeRestoreModal"
-                :disabled="restoringId !== null"
-                class="tw-w-full sm:tw-w-auto tw-bg-slate-200 hover:tw-bg-slate-300 disabled:tw-opacity-50 tw-text-gray-700 tw-font-medium tw-py-2 tw-px-4 tw-rounded-lg tw-text-sm tw-transition-colors"
-              >
-                {{ $t('common.cancel') }}
-              </button>
-              <button 
-                @click="confirmRestoreAppointment"
-                :disabled="restoringId !== null"
-                class="tw-w-full sm:tw-w-auto tw-bg-emerald-600 hover:tw-bg-emerald-700 disabled:tw-bg-gray-400 tw-text-white tw-font-medium tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm tw-transition-colors tw-shadow-sm"
-              >
-                {{ restoringId !== null ? $t('history.restoring') : $t('history.confirmRestore') }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- ======= 3. Batch Restore Confirm Modal ======= -->
+    <!-- ======= 2. Batch Restore Confirm Modal ======= -->
     <Teleport to="body">
       <Transition name="modal">
         <div 
@@ -899,7 +824,7 @@
 
 import { RETENTION_DAYS } from '~/constants/appointments'
 
-const { statusClass, statusLabel, formatDate, formatDateTime, daysUntilPurge, purgeNotice } = useAppointment()
+const { statusClass, statusLabel, formatDate, formatDateTime, daysUntilPurge, purgeNotice, sortBySchedule } = useAppointment()
 
 const { session, roles, canRestore, canManage, isGuard } = useSession()
 const isPatient = computed(() => roles.value.length === 1 && roles.value[0] === 'Patient')
@@ -911,7 +836,6 @@ const isPatient = computed(() => roles.value.length === 1 && roles.value[0] === 
 const appointments = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
-const restoringId = ref(null)
 const purging = ref(false)
 const toastMsg = ref('')
 
@@ -924,14 +848,13 @@ const batchRestoreIds = ref([])
 const batchRestoreMode = ref('selected')
 
 const historyAppointments = computed(() => {
-  return appointments.value.filter(item => item.status === 'cancelled' || item.status === 'completed')
+  const items = appointments.value.filter(item => item.status === 'cancelled' || item.status === 'completed')
+  return sortBySchedule(items)
 })
 
 const serverToday = computed(() => session.value?.server_today || '')
 const patientAppointments = computed(() => {
-  return [...appointments.value].sort((a, b) =>
-    String(b.appointment_date).localeCompare(String(a.appointment_date))
-  )
+  return sortBySchedule(appointments.value)
 })
 
 const upcomingAppointments = computed(() => {
@@ -969,12 +892,9 @@ const toggleSelectAll = () => {
     : historyAppointments.value.map(a => a.appointment_id)
 }
 
-// Detail & Restore Modal States
+// Detail Modal State
 const showModal = ref(false)
 const selectedAppointment = ref(null)
-
-const showRestoreModal = ref(false)
-const itemToRestore = ref(null)
 
 // ============================================================
 // API Fetching
@@ -1076,48 +996,6 @@ const confirmBatchRestore = async () => {
 // ============================================================
 // Modal Actions
 // ============================================================
-
-const askRestoreAppointment = (item) => {
-  itemToRestore.value = item
-  showRestoreModal.value = true
-}
-
-const closeRestoreModal = () => {
-  showRestoreModal.value = false
-  itemToRestore.value = null
-}
-
-const confirmRestoreAppointment = async () => {
-  if (!itemToRestore.value) return
-
-  const appointmentId = itemToRestore.value.appointment_id
-  const patientName = itemToRestore.value.patient_name
-  restoringId.value = appointmentId
-
-  try {
-    await $fetch(`/api/appointments/${appointmentId}/restore`, { method: 'POST' })
-
-    const item = appointments.value.find(i => i.appointment_id === appointmentId)
-    if (item) {
-      item.status = 'backup'
-    } else {
-      appointments.value = appointments.value.filter(i => i.appointment_id !== appointmentId)
-    }
-
-    toastMsg.value = $t('history.restoreSuccess', { name: patientName })
-    closeRestoreModal()
-
-    setTimeout(() => {
-      toastMsg.value = ''
-    }, 4000)
-  } catch (error) {
-    // ✅ แก้เป็นแบบนี้:
-  alert($t('history.restoreError', { detail: error?.data?.statusMessage || error?.message || $t('common.unknown') }))
-    console.error('Restore error:', error)
-  } finally {
-    restoringId.value = null
-  }
-}
 
 const openDetail = (item) => {
   selectedAppointment.value = { ...item }
