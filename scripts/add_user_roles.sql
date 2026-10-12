@@ -34,3 +34,10 @@ BEGIN
   WHERE cardinality(roles) = 0;
 END;
 $$;
+
+-- จำกัดสิทธิ์เรียก procedure นี้ ให้เฉพาะผู้ดูแลฐานข้อมูล (รันผ่าน SQL Editor)
+REVOKE ALL ON PROCEDURE public.backfill_user_roles() FROM PUBLIC;
+REVOKE ALL ON PROCEDURE public.backfill_user_roles() FROM anon;
+REVOKE ALL ON PROCEDURE public.backfill_user_roles() FROM authenticated;
+REVOKE ALL ON PROCEDURE public.backfill_user_roles() FROM service_role;
+GRANT EXECUTE ON PROCEDURE public.backfill_user_roles() TO postgres;

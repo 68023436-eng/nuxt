@@ -27,12 +27,8 @@ $$;
 CALL public.ensure_hospital_user_columns();
 
 -- จำกัดสิทธิ์เรียก procedure นี้ (DDL migration) ให้เฉพาะผู้ดูแลฐานข้อมูล
-DO $$
-BEGIN
-  BEGIN
-    REVOKE ALL ON PROCEDURE public.ensure_hospital_user_columns() FROM PUBLIC;
-    GRANT EXECUTE ON PROCEDURE public.ensure_hospital_user_columns() TO postgres;
-  EXCEPTION WHEN others THEN
-    RAISE NOTICE 'skip grant hardening: ensure_hospital_user_columns';
-  END;
-END $$;
+REVOKE ALL ON PROCEDURE public.ensure_hospital_user_columns() FROM PUBLIC;
+REVOKE ALL ON PROCEDURE public.ensure_hospital_user_columns() FROM anon;
+REVOKE ALL ON PROCEDURE public.ensure_hospital_user_columns() FROM authenticated;
+REVOKE ALL ON PROCEDURE public.ensure_hospital_user_columns() FROM service_role;
+GRANT EXECUTE ON PROCEDURE public.ensure_hospital_user_columns() TO postgres;;

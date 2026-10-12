@@ -51,7 +51,7 @@
           <!-- Mobile Cards (< md) -->
           <div class="tw-block md:tw-hidden tw-divide-y tw-divide-slate-100">
             <div 
-              v-for="(item, index) in scanHistory" 
+              v-for="(item, index) in pagedScanHistory" 
               :key="'guard-m-' + item.id"
               class="tw-p-4 tw-space-y-2.5 hover:tw-bg-slate-50/70 tw-transition-colors"
             >
@@ -93,7 +93,7 @@
               </thead>
               <tbody class="tw-divide-y tw-divide-slate-100">
                 <tr
-                  v-for="(item, index) in scanHistory"
+                  v-for="(item, index) in pagedScanHistory"
                   :key="item.id"
                   class="hover:tw-bg-slate-50 tw-transition-colors"
                 >
@@ -125,9 +125,33 @@
             </table>
           </div>
           
-          <div class="tw-px-4 sm:tw-px-6 tw-py-3 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-xs sm:tw-text-sm tw-text-gray-500">
-            {{ $t('common.totalItems', { count: scanHistory.length }) }}
+          <div class="tw-px-4 sm:tw-px-6 tw-py-3 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-flex tw-flex-col sm:tw-flex-row sm:tw-items-center sm:tw-justify-between tw-gap-3">
+          <div class="tw-text-xs sm:tw-text-sm tw-text-gray-500 tw-text-center sm:tw-text-left">
+            {{ $t('common.showingRange', { start: guardRangeStart, end: guardRangeEnd, total: scanHistory.length }) }}
           </div>
+
+          <div v-if="totalGuardPages > 1" class="tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <button
+              @click="prevGuardPage"
+              :disabled="guardPage === 1"
+              class="tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs sm:tw-text-sm tw-font-medium tw-border tw-border-slate-300 tw-bg-white tw-text-gray-700 hover:tw-bg-slate-100 disabled:tw-opacity-40 disabled:tw-cursor-not-allowed tw-transition-colors"
+            >
+              ← {{ $t('common.prevPage') }}
+            </button>
+
+            <span class="tw-text-xs sm:tw-text-sm tw-text-gray-600 tw-font-medium tw-px-1 tw-whitespace-nowrap">
+              {{ $t('common.pageOf', { page: guardPage, total: totalGuardPages }) }}
+            </span>
+
+            <button
+              @click="nextGuardPage"
+              :disabled="guardPage === totalGuardPages"
+              class="tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs sm:tw-text-sm tw-font-medium tw-border tw-border-slate-300 tw-bg-white tw-text-gray-700 hover:tw-bg-slate-100 disabled:tw-opacity-40 disabled:tw-cursor-not-allowed tw-transition-colors"
+            >
+              {{ $t('common.nextPage') }} →
+            </button>
+          </div>
+        </div>
         </div>
       </div>
 
@@ -480,7 +504,7 @@
           <!-- Mobile Cards (< md) -->
           <div class="tw-block md:tw-hidden tw-divide-y tw-divide-slate-100">
             <div 
-              v-for="(item, index) in historyAppointments" 
+              v-for="(item, index) in pagedHistory" 
               :key="'staff-m-' + item.appointment_id"
               :class="[
                 'tw-p-4 tw-space-y-3 tw-transition-colors',
@@ -497,7 +521,7 @@
                     @change="toggleSelect(item)"
                     class="tw-w-4 tw-h-4 tw-accent-indigo-600 tw-cursor-pointer"
                   />
-                  <span class="tw-text-xs tw-font-bold tw-text-slate-400">#{{ index + 1 }}</span>
+                  <span class="tw-text-xs tw-font-bold tw-text-slate-400">#{{ staffRowNumber(index) }}</span>
                   <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2 tw-py-0.5 tw-rounded tw-text-xs">
                     {{ item.phone_number || '-' }}
                   </span>
@@ -564,7 +588,7 @@
               </thead>
               <tbody class="tw-divide-y tw-divide-slate-100">
                 <tr 
-                  v-for="(item, index) in historyAppointments" 
+                  v-for="(item, index) in pagedHistory" 
                   :key="item.appointment_id"
                   :class="[
                     'tw-transition-colors',
@@ -579,7 +603,7 @@
                       class="tw-w-4 tw-h-4 tw-accent-indigo-600 tw-cursor-pointer"
                     />
                   </td>
-                  <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-500">{{ index + 1 }}</td>
+                  <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-500">{{ staffRowNumber(index) }}</td>
                   <td class="tw-px-4 lg:tw-px-5 tw-py-4">
                     <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[200px]" :title="item.patient_name">{{ item.patient_name }}</div>
                   </td>
@@ -626,9 +650,33 @@
             </table>
           </div>
 
-          <div class="tw-px-4 sm:tw-px-6 tw-py-3.5 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-xs sm:tw-text-sm tw-text-gray-500">
-            {{ $t('history.totalHistory', { count: historyAppointments.length }) }}
+          <div class="tw-px-4 sm:tw-px-6 tw-py-3.5 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-flex tw-flex-col sm:tw-flex-row sm:tw-items-center sm:tw-justify-between tw-gap-3">
+          <div class="tw-text-xs sm:tw-text-sm tw-text-gray-500 tw-text-center sm:tw-text-left">
+            {{ $t('common.showingRange', { start: staffRangeStart, end: staffRangeEnd, total: historyAppointments.length }) }}
           </div>
+
+          <div v-if="totalStaffPages > 1" class="tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <button
+              @click="prevStaffPage"
+              :disabled="staffPage === 1"
+              class="tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs sm:tw-text-sm tw-font-medium tw-border tw-border-slate-300 tw-bg-white tw-text-gray-700 hover:tw-bg-slate-100 disabled:tw-opacity-40 disabled:tw-cursor-not-allowed tw-transition-colors"
+            >
+              ← {{ $t('common.prevPage') }}
+            </button>
+
+            <span class="tw-text-xs sm:tw-text-sm tw-text-gray-600 tw-font-medium tw-px-1 tw-whitespace-nowrap">
+              {{ $t('common.pageOf', { page: staffPage, total: totalStaffPages }) }}
+            </span>
+
+            <button
+              @click="nextStaffPage"
+              :disabled="staffPage === totalStaffPages"
+              class="tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs sm:tw-text-sm tw-font-medium tw-border tw-border-slate-300 tw-bg-white tw-text-gray-700 hover:tw-bg-slate-100 disabled:tw-opacity-40 disabled:tw-cursor-not-allowed tw-transition-colors"
+            >
+              {{ $t('common.nextPage') }} →
+            </button>
+          </div>
+        </div>
         </div>
       </template>
 
@@ -852,6 +900,66 @@ const historyAppointments = computed(() => {
   return sortBySchedule(items)
 })
 
+// ============================================================
+// Pagination — แสดงทีละ 10 รายการ
+// ============================================================
+
+const PAGE_SIZE = 10
+
+// ---- Staff/Admin history (ประวัติลบ + กู้คืน) ----
+const staffPage = ref(1)
+const totalStaffPages = computed(() => Math.max(1, Math.ceil(historyAppointments.value.length / PAGE_SIZE)))
+
+const pagedHistory = computed(() => {
+  const start = (staffPage.value - 1) * PAGE_SIZE
+  return historyAppointments.value.slice(start, start + PAGE_SIZE)
+})
+
+const staffRangeStart = computed(() =>
+  historyAppointments.value.length === 0 ? 0 : (staffPage.value - 1) * PAGE_SIZE + 1,
+)
+const staffRangeEnd = computed(() =>
+  Math.min(staffPage.value * PAGE_SIZE, historyAppointments.value.length),
+)
+const staffRowNumber = (index) => (staffPage.value - 1) * PAGE_SIZE + index + 1
+
+const goToStaffPage = (page) => {
+  staffPage.value = Math.min(Math.max(1, page), totalStaffPages.value)
+}
+const prevStaffPage = () => goToStaffPage(staffPage.value - 1)
+const nextStaffPage = () => goToStaffPage(staffPage.value + 1)
+
+// ถ้าข้อมูลลดลงจนหน้าปัจจุบันเกินหน้าสุดท้าย ให้ถอยกลับ
+watch(totalStaffPages, (max) => {
+  if (staffPage.value > max) staffPage.value = max
+})
+
+// ---- Guard scan history (ประวัติการตรวจสอบ) ----
+const guardPage = ref(1)
+const totalGuardPages = computed(() => Math.max(1, Math.ceil(scanHistory.value.length / PAGE_SIZE)))
+
+const pagedScanHistory = computed(() => {
+  const start = (guardPage.value - 1) * PAGE_SIZE
+  return scanHistory.value.slice(start, start + PAGE_SIZE)
+})
+
+const guardRangeStart = computed(() =>
+  scanHistory.value.length === 0 ? 0 : (guardPage.value - 1) * PAGE_SIZE + 1,
+)
+const guardRangeEnd = computed(() =>
+  Math.min(guardPage.value * PAGE_SIZE, scanHistory.value.length),
+)
+
+const goToGuardPage = (page) => {
+  guardPage.value = Math.min(Math.max(1, page), totalGuardPages.value)
+}
+const prevGuardPage = () => goToGuardPage(guardPage.value - 1)
+const nextGuardPage = () => goToGuardPage(guardPage.value + 1)
+
+watch(totalGuardPages, (max) => {
+  if (guardPage.value > max) guardPage.value = max
+})
+
 const serverToday = computed(() => session.value?.server_today || '')
 const patientAppointments = computed(() => {
   return sortBySchedule(appointments.value)
@@ -906,6 +1014,7 @@ const fetchHistory = async () => {
   try {
     const data = await $fetch('/api/appointments', { method: 'GET' })
     appointments.value = data || []
+    staffPage.value = 1
   } catch (error) {
     errorMsg.value = error?.data?.statusMessage || error?.message || $t('history.fetchError')
   } finally {
@@ -919,6 +1028,7 @@ const fetchScanHistory = async () => {
   try {
     const data = await $fetch('/api/scan/history', { method: 'GET' })
     scanHistory.value = data || []
+    guardPage.value = 1
   } catch (error) {
     errorMsg.value = error?.data?.statusMessage || error?.message || $t('history.fetchError')
   } finally {

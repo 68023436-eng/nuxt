@@ -39,20 +39,32 @@ export default defineEventHandler(async (event) => {
       { p_ids: numericIds },
     )
 
+    let updated = []
     if (updateError) {
-      console.error('Server batch restore error:', updateError.message)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'ไม่สามารถกู้คืนข้อมูลได้',
-      })
-    }
+      // fallback กันกรณี DB ยังไม่ได้สร้าง function — พฤติกรรมเดิม
+      console.warn('restore_appointments rpc unavailable, falling back to client-side:', updateError.message)
+      const { data: fbRows, error: fbError } = await (client as any)
+        .from('appointments')
+        .update({ status: 'backup', deleted_at: null })
+        .in('appointment_id', numericIds)
+        .select('appointment_id')
 
-    const updated = rows || []
+      if (fbError) {
+        console.error('Server batch restore error:', fbError.message)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'ไม่สามารถกู้คืนข้อมูลได้',
+        })
+      }
+      updated = (fbRows || []).map((r: any) => ({ appointment_id: r.appointment_id }))
+    } else {
+      updated = (rows || []).map((r: any) => ({ appointment_id: r.appointment_id }))
+    }
 
     return {
       success: true,
       count: updated.length,
-      data: updated.map((r: any) => ({ appointment_id: r.appointment_id })),
+      data: updated,
       message: `กู้คืนข้อมูลสำเร็จ ${updated.length} รายการ (สถานะ: ข้อมูล backup)`,
     }
   } catch (err: any) {

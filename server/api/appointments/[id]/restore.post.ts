@@ -38,15 +38,27 @@ export default defineEventHandler(async (event) => {
       { p_ids: [numericId] },
     )
 
+    let row = rows?.[0]
     if (updateError) {
-      console.error('Server restore error:', updateError.message)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'ไม่สามารถกู้คืนข้อมูลได้',
-      })
+      // fallback กันกรณี DB ยังไม่ได้สร้าง function — พฤติกรรมเดิม
+      console.warn('restore_appointments rpc unavailable, falling back to client-side:', updateError.message)
+      const { data: fbRows, error: fbError } = await (client as any)
+        .from('appointments')
+        .update({ status: 'backup', deleted_at: null })
+        .eq('appointment_id', numericId)
+        .select('appointment_id')
+
+      if (fbError) {
+        console.error('Server restore error:', fbError.message)
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'ไม่สามารถกู้คืนข้อมูลได้',
+        })
+      }
+      row = fbRows?.[0]
     }
 
-    return { success: true, message: 'กู้คืนข้อมูลสำเร็จ (สถานะ: ข้อมูล backup)', data: rows?.[0] || null }
+    return { success: true, message: 'กู้คืนข้อมูลสำเร็จ (สถานะ: ข้อมูล backup)', data: row || null }
   } catch (err: any) {
     if (err.statusCode) throw err
 

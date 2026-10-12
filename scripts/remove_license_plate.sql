@@ -18,12 +18,8 @@ $$;
 CALL public.ensure_license_plate_nullable();
 
 -- จำกัดสิทธิ์เรียก procedure นี้ (DDL migration) ให้เฉพาะผู้ดูแลฐานข้อมูล
-DO $$
-BEGIN
-  BEGIN
-    REVOKE ALL ON PROCEDURE public.ensure_license_plate_nullable() FROM PUBLIC;
-    GRANT EXECUTE ON PROCEDURE public.ensure_license_plate_nullable() TO postgres;
-  EXCEPTION WHEN others THEN
-    RAISE NOTICE 'skip grant hardening: ensure_license_plate_nullable';
-  END;
-END $$;
+REVOKE ALL ON PROCEDURE public.ensure_license_plate_nullable() FROM PUBLIC;
+REVOKE ALL ON PROCEDURE public.ensure_license_plate_nullable() FROM anon;
+REVOKE ALL ON PROCEDURE public.ensure_license_plate_nullable() FROM authenticated;
+REVOKE ALL ON PROCEDURE public.ensure_license_plate_nullable() FROM service_role;
+GRANT EXECUTE ON PROCEDURE public.ensure_license_plate_nullable() TO postgres;;
