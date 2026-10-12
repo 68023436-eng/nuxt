@@ -150,18 +150,21 @@
                 <p class="tw-text-xs tw-text-gray-400 tw-mt-1.5">พิมพ์ชื่อ/นามสกุล หรือเบอร์โทรเพื่อเลือกผู้ป่วย</p>
               </div>
 
-              <!-- ทะเบียนรถ -->
+              <!-- เบอร์โทรศัพท์ -->
               <div>
                 <label class="tw-block tw-text-xs sm:tw-text-sm tw-font-medium tw-text-gray-700 tw-mb-1.5">
-                  ทะเบียนรถยนต์ <span class="tw-text-red-500">*</span>
+                  เบอร์โทรศัพท์ <span class="tw-text-red-500">*</span>
                 </label>
                 <input
-                  v-model="form.license_plate"
-                  type="text"
+                  v-model="form.phone_number"
+                  type="tel"
+                  maxlength="10"
+                  inputmode="numeric"
                   required
-                  placeholder="เช่น 1กข 1234 กทม"
+                  placeholder="เช่น 0812345678"
                   class="tw-w-full tw-border tw-border-slate-300 tw-p-2.5 tw-text-sm tw-rounded-xl tw-outline-none focus:tw-ring-2 focus:tw-ring-green-400 tw-bg-white"
                 />
+                <p class="tw-text-xs tw-text-gray-400 tw-mt-1.5">ดึงจากบัญชีผู้ป่วยอัตโนมัติ — แก้ไขได้</p>
               </div>
 
               <!-- แผนกตรวจ -->
@@ -312,7 +315,7 @@ const { canCreate, refresh } = useSession()
 
 const form = ref({
   patient_user_id: null,
-  license_plate: '',
+  phone_number: '',
   dept_id: null,
   appointment_date: '',
   time_slot: '',
@@ -345,6 +348,7 @@ const filteredPatients = computed(() => {
 
 const selectPatient = (p) => {
   form.value.patient_user_id = p.user_id
+  form.value.phone_number = p.phone_number ? String(p.phone_number) : ''
   patientSearch.value = patientDisplayName(p)
   lastPatientSelectionText = patientSearch.value
   patientSearchOpen.value = false
@@ -353,6 +357,7 @@ const selectPatient = (p) => {
 
 const clearPatientSelection = () => {
   form.value.patient_user_id = null
+  form.value.phone_number = ''
   patientSearch.value = ''
   lastPatientSelectionText = ''
   patientSearchOpen.value = false
@@ -377,6 +382,7 @@ const handlePatientEnter = () => {
 watch(patientSearch, (val) => {
   if (val !== lastPatientSelectionText && form.value.patient_user_id) {
     form.value.patient_user_id = null
+    form.value.phone_number = ''
   }
 })
 
@@ -436,6 +442,7 @@ const handleCreateAccount = async () => {
     await fetchPatients()
     resetCreateForm()
     form.value.patient_user_id = created?.user_id || null
+    form.value.phone_number = created?.phone_number ? String(created.phone_number) : ''
     patientSearch.value = created?.full_name ? patientDisplayName(created) : ''
     lastPatientSelectionText = patientSearch.value
     patientSearchOpen.value = false
@@ -541,7 +548,7 @@ const handleSubmit = async () => {
 
     form.value = {
       patient_user_id: null,
-      license_plate: '',
+      phone_number: '',
       dept_id: null,
       appointment_date: '',
       time_slot: '',

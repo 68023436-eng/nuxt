@@ -52,3 +52,24 @@ export function bangkokDayRangeToday(): { start: Date; end: Date } {
   const end = new Date(Date.UTC(y, m - 1, d, 17, 0, 0))
   return { start, end }
 }
+
+const pad2 = (n: number): string => String(n).padStart(2, '0')
+
+/**
+ * ขอบเขตของเดือน (Asia/Bangkok) เป็น ISO string พร้อม offset +07:00
+ * สำหรับกรองคอลัมน์ timestamptz เช่น scan_history.created_at: [start, end)
+ * @param month 'YYYY-MM' — ถ้าไม่ถูกต้อง ใช้เดือนปัจจุบันตาม Bangkok
+ */
+export function bangkokMonthRange(month: string): { startIso: string; endIso: string } {
+  const value = /^(\d{4})-(0[1-9]|1[0-2])$/.test(month) ? month : bangkokToday().slice(0, 7)
+  const [yearStr, monthStr] = value.split('-') as [string, string]
+  const year = Number(yearStr)
+  const m = Number(monthStr)
+  // เดือนถัดไป (รองรับข้ามปี)
+  const nextYear = m === 12 ? year + 1 : year
+  const nextMonth = m === 12 ? 1 : m + 1
+  return {
+    startIso: `${year}-${pad2(m)}-01T00:00:00+07:00`,
+    endIso: `${nextYear}-${pad2(nextMonth)}-01T00:00:00+07:00`,
+  }
+}

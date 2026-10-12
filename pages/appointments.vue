@@ -24,6 +24,40 @@
         </div>
       </div>
 
+      <!-- Action Bar: ติดตาม/ลบแบบกลุ่ม -->
+      <div v-if="canCancel && activeAppointments.length > 0" class="tw-mb-4 tw-bg-white tw-border tw-border-slate-200 tw-rounded-xl tw-p-4 tw-shadow-sm">
+        <div class="tw-flex tw-flex-col sm:tw-flex-row sm:tw-items-center tw-gap-3">
+          <div class="tw-text-xs sm:tw-text-sm tw-text-gray-700">
+            <span class="tw-font-semibold">{{ $t('appointments.batchDeleteTitle') }}</span>
+            <span class="tw-text-gray-400 tw-ml-1">{{ $t('appointments.batchDeleteHint') }}</span>
+          </div>
+          <div class="tw-flex-1 tw-hidden sm:tw-block"></div>
+          <div class="tw-flex tw-flex-col sm:tw-flex-row tw-items-stretch sm:tw-items-center tw-gap-2">
+            <button
+              :disabled="selectedIds.length === 0 || deletingAll"
+              @click="askBatchDelete(selectedIds, 'selected')"
+              class="tw-w-full sm:tw-w-auto tw-border tw-border-amber-500 hover:tw-bg-amber-100 disabled:tw-bg-gray-300 tw-text-amber-800 tw-px-4 tw-py-2 tw-rounded-lg tw-text-xs sm:tw-text-sm tw-font-medium tw-transition-colors"
+            >
+              {{ $t('appointments.deleteSelected', { count: selectedIds.length }) }}
+            </button>
+            <button
+              :disabled="activeAppointments.length === 0 || deletingAll"
+              @click="askBatchDelete(activeAppointments.map(a => a.appointment_id), 'all')"
+              class="tw-w-full sm:tw-w-auto tw-bg-red-700 hover:tw-bg-red-800 disabled:tw-bg-gray-300 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-text-xs sm:tw-text-sm tw-font-medium tw-transition-colors"
+            >
+              {{ $t('appointments.deleteAll', { count: activeAppointments.length }) }}
+            </button>
+            <button
+              v-if="selectedIds.length > 0"
+              @click="selectedIds = []"
+              class="tw-text-xs sm:tw-text-sm tw-text-gray-500 hover:tw-text-gray-700 tw-underline tw-text-center tw-py-1"
+            >
+              {{ $t('appointments.clearSelection') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Loading State -->
       <div v-if="loading" class="tw-text-center tw-py-12 sm:tw-py-16">
         <div class="tw-inline-block tw-w-8 tw-h-8 tw-border-4 tw-border-amber-400 tw-border-t-transparent tw-rounded-full tw-animate-spin"></div>
@@ -48,15 +82,25 @@
         <!-- Mobile Card View (< md) -->
         <div class="tw-block md:tw-hidden tw-divide-y tw-divide-slate-100">
           <div 
-            v-for="(item, index) in activeAppointments" 
+            v-for="(item, index) in pagedAppointments" 
             :key="'mobile-' + item.appointment_id"
-            class="tw-p-4 tw-space-y-3 hover:tw-bg-slate-50/60 tw-transition-colors"
+            :class="[
+              'tw-p-4 tw-space-y-3 tw-transition-colors',
+              isSelected(item.appointment_id) ? 'tw-bg-red-50/70' : 'hover:tw-bg-slate-50/60'
+            ]"
           >
             <div class="tw-flex tw-items-center tw-justify-between tw-gap-2">
               <div class="tw-flex tw-items-center tw-gap-2">
-                <span class="tw-text-xs tw-font-bold tw-text-slate-400">#{{ index + 1 }}</span>
+                <input
+                  v-if="canCancel"
+                  type="checkbox"
+                  :checked="isSelected(item.appointment_id)"
+                  @change="toggleSelect(item)"
+                  class="tw-w-4 tw-h-4 tw-accent-red-600 tw-cursor-pointer"
+                />
+                <span class="tw-text-xs tw-font-bold tw-text-slate-400">#{{ rowNumber(index) }}</span>
                 <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2 tw-py-0.5 tw-rounded tw-text-xs">
-                  {{ item.license_plate }}
+                  {{ item.phone_number || '-' }}
                 </span>
               </div>
               <span :class="statusClass(item.status)" class="tw-px-2.5 tw-py-0.5 tw-rounded-full tw-text-xs tw-font-medium">
@@ -66,9 +110,6 @@
 
             <div class="tw-grid tw-grid-cols-1 tw-gap-1">
               <p class="tw-font-semibold tw-text-gray-800 tw-text-base">{{ item.patient_name }}</p>
-              <p class="tw-text-xs tw-text-gray-500 tw-flex tw-items-center tw-gap-1">
-                <span>📞</span> {{ item.phone_number || '-' }}
-              </p>
               <p class="tw-text-xs tw-text-teal-700 tw-mt-1">
                 🏥 {{ item.department_name || item.dept_id || '-' }}
               </p>
@@ -86,14 +127,6 @@
               >
                 {{ $t('common.viewDetails') }}
               </button>
-              <button 
-                v-if="canCancel"
-                @click="askDeleteAppointment(item)"
-                :disabled="deletingId === item.appointment_id"
-                class="tw-bg-red-500 hover:tw-bg-red-600 disabled:tw-bg-gray-300 tw-text-white tw-px-4 tw-py-2 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
-              >
-                {{ deletingId === item.appointment_id ? $t('common.deleting') :$t('common.delete') }}
-              </button>
             </div>
           </div>
         </div>
@@ -103,9 +136,17 @@
           <table class="tw-w-full tw-text-sm tw-text-left tw-min-w-[840px]">
             <thead class="tw-bg-slate-50 tw-border-b tw-border-slate-200">
               <tr>
+                <th v-if="canCancel" class="tw-px-4 lg:tw-px-5 tw-py-4 tw-w-10">
+                  <input
+                    type="checkbox"
+                    :checked="allItemsSelected"
+                    @change="toggleSelectAll"
+                    class="tw-w-4 tw-h-4 tw-accent-red-600 tw-cursor-pointer"
+                  />
+                </th>
                 <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-12">{{ $t('appointments.tableNo') }}</th>
                 <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap">{{ $t('appointments.tablePatient') }}</th>
-                <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[130px]">{{ $t('appointments.tablePlate') }}</th>
+                <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[130px]">{{ $t('appointments.tablePhone') }}</th>
                 <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap">{{ $t('appointments.tableDept') }}</th>
                 <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[180px]">{{ $t('appointments.tableDateTime') }}</th>
                 <th class="tw-px-4 lg:tw-px-5 tw-py-4 tw-font-semibold tw-text-gray-700 tw-whitespace-nowrap tw-w-[110px]">{{ $t('appointments.tableStatus') }}</th>
@@ -114,20 +155,30 @@
             </thead>
             <tbody class="tw-divide-y tw-divide-slate-100">
               <tr 
-                v-for="(item, index) in activeAppointments" 
+                v-for="(item, index) in pagedAppointments" 
                 :key="item.appointment_id"
-                class="hover:tw-bg-slate-50/80 tw-transition-colors"
+                :class="[
+                  'tw-transition-colors',
+                  isSelected(item.appointment_id) ? 'tw-bg-red-50/60' : 'hover:tw-bg-slate-50/80'
+                ]"
               >
-                <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-500 tw-whitespace-nowrap">{{ index + 1 }}</td>
+                <td v-if="canCancel" class="tw-px-4 lg:tw-px-5 tw-py-4 tw-w-10">
+                  <input
+                    type="checkbox"
+                    :checked="isSelected(item.appointment_id)"
+                    @change="toggleSelect(item)"
+                    class="tw-w-4 tw-h-4 tw-accent-red-600 tw-cursor-pointer"
+                  />
+                </td>
+                <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-text-gray-500 tw-whitespace-nowrap">{{ rowNumber(index) }}</td>
                 
                 <td class="tw-px-4 lg:tw-px-5 tw-py-4">
                   <div class="tw-font-medium tw-text-gray-800 tw-truncate tw-max-w-[180px]" :title="item.patient_name">{{ item.patient_name }}</div>
-                  <div class="tw-text-xs tw-text-gray-400 tw-mt-0.5 tw-whitespace-nowrap">{{ item.phone_number || '-' }}</div>
                 </td>
 
                 <td class="tw-px-4 lg:tw-px-5 tw-py-4 tw-whitespace-nowrap">
                   <span class="tw-inline-block tw-bg-slate-100 tw-border tw-border-slate-200 tw-text-gray-800 tw-font-bold tw-px-2.5 tw-py-1 tw-rounded-md tw-text-xs">
-                    {{ item.license_plate }}
+                    {{ item.phone_number || '-' }}
                   </span>
                 </td>
 
@@ -154,14 +205,6 @@
                     >
                       {{ $t('common.viewDetails') }}
                     </button>
-                    <button 
-                      v-if="canCancel"
-                      @click="askDeleteAppointment(item)"
-                      :disabled="deletingId === item.appointment_id"
-                      class="tw-bg-red-500 hover:tw-bg-red-600 disabled:tw-bg-gray-300 tw-text-white tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs tw-font-medium tw-transition-colors"
-                    >
-                      {{ deletingId === item.appointment_id ? $t('common.deleting') :$t('common.delete') }}
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -169,9 +212,33 @@
           </table>
         </div>
 
-        <!-- Summary -->
-        <div class="tw-px-4 sm:tw-px-6 tw-py-3.5 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-text-xs sm:tw-text-sm tw-text-gray-500">
-          {{ $t('common.totalItems', { count: activeAppointments.length }) }}
+        <!-- Summary & Pagination -->
+        <div class="tw-px-4 sm:tw-px-6 tw-py-3.5 tw-bg-slate-50 tw-border-t tw-border-slate-200 tw-flex tw-flex-col sm:tw-flex-row sm:tw-items-center sm:tw-justify-between tw-gap-3">
+          <div class="tw-text-xs sm:tw-text-sm tw-text-gray-500 tw-text-center sm:tw-text-left">
+            {{ $t('common.showingRange', { start: rangeStart, end: rangeEnd, total: activeAppointments.length }) }}
+          </div>
+
+          <div v-if="totalPages > 1" class="tw-flex tw-items-center tw-justify-center tw-gap-2">
+            <button
+              @click="prevPage"
+              :disabled="currentPage === 1"
+              class="tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs sm:tw-text-sm tw-font-medium tw-border tw-border-slate-300 tw-bg-white tw-text-gray-700 hover:tw-bg-slate-100 disabled:tw-opacity-40 disabled:tw-cursor-not-allowed tw-transition-colors"
+            >
+              ← {{ $t('common.prevPage') }}
+            </button>
+
+            <span class="tw-text-xs sm:tw-text-sm tw-text-gray-600 tw-font-medium tw-px-1 tw-whitespace-nowrap">
+              {{ $t('common.pageOf', { page: currentPage, total: totalPages }) }}
+            </span>
+
+            <button
+              @click="nextPage"
+              :disabled="currentPage === totalPages"
+              class="tw-px-3 tw-py-1.5 tw-rounded-lg tw-text-xs sm:tw-text-sm tw-font-medium tw-border tw-border-slate-300 tw-bg-white tw-text-gray-700 hover:tw-bg-slate-100 disabled:tw-opacity-40 disabled:tw-cursor-not-allowed tw-transition-colors"
+            >
+              {{ $t('common.nextPage') }} →
+            </button>
+          </div>
         </div>
       </div>
     </main>
@@ -265,16 +332,6 @@
                   </div>
 
                   <div class="tw-flex tw-items-start tw-gap-3">
-                    <div class="tw-w-8 tw-h-8 tw-bg-cyan-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
-                      <span class="tw-text-cyan-500 tw-text-sm">🚗</span>
-                    </div>
-                    <div>
-                      <p class="tw-text-xs tw-text-gray-400 tw-font-medium tw-uppercase tw-tracking-wider">{{ $t('appointments.licensePlate') }}</p>
-                      <p class="tw-text-gray-800 tw-font-semibold tw-text-sm">{{ selectedAppointment.license_plate }}</p>
-                    </div>
-                  </div>
-
-                  <div class="tw-flex tw-items-start tw-gap-3">
                     <div class="tw-w-8 tw-h-8 tw-bg-teal-50 tw-rounded-lg tw-flex tw-items-center tw-justify-center tw-flex-shrink-0">
                       <span class="tw-text-teal-500 tw-text-sm">🏥</span>
                     </div>
@@ -353,25 +410,24 @@
       </Teleport>
     </ClientOnly>
 
-    <!-- ======= Delete Confirm Modal (ครอบด้วย ClientOnly) ======= -->
+    <!-- ======= Batch Delete Confirm Modal (ครอบด้วย ClientOnly) ======= -->
     <ClientOnly>
       <Teleport to="body">
         <Transition name="modal">
-          <div 
-            v-if="showDeleteModal" 
+          <div
+            v-if="showBatchDeleteModal"
             class="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-p-4"
           >
-            <div class="tw-fixed tw-inset-0 tw-bg-black/50 tw-backdrop-blur-sm" @click="closeDeleteModal"></div>
+            <div class="tw-fixed tw-inset-0 tw-bg-black/50 tw-backdrop-blur-sm" @click="closeBatchDeleteModal"></div>
 
             <div class="tw-relative tw-bg-white tw-rounded-2xl tw-shadow-2xl tw-w-full tw-max-w-md tw-overflow-hidden tw-transform tw-transition-all">
-              
+
               <div class="tw-p-5 sm:tw-p-6 tw-text-center">
-                <h3 class="tw-text-base sm:tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">{{ $t('appointments.deleteConfirmTitle') }}</h3>
+                <h3 class="tw-text-base sm:tw-text-lg tw-font-bold tw-text-gray-800 tw-mb-2">
+                  {{ batchDeleteMode === 'all' ? $t('appointments.batchDeleteTitleAll') : $t('appointments.batchDeleteTitleSelected') }}
+                </h3>
                 <p class="tw-text-xs sm:tw-text-sm tw-text-gray-600 tw-mb-3">
-                  {{ $t('appointments.deleteConfirmText', {
-                    name: itemToDelete?.patient_name,
-                    id: itemToDelete?.appointment_id,
-                  }) }}
+                  {{ $t('appointments.batchDeleteText', { count: batchDeleteIds.length }) }}
                 </p>
                 <p class="tw-text-xs tw-text-amber-600 tw-bg-amber-50 tw-p-2.5 tw-rounded-lg tw-border tw-border-amber-200">
                   {{ $t('appointments.deleteConfirmNote', { days: RETENTION_DAYS }) }}
@@ -379,19 +435,19 @@
               </div>
 
               <div class="tw-px-5 sm:tw-px-6 tw-py-3.5 sm:tw-py-4 tw-bg-slate-50 tw-border-t tw-border-slate-100 tw-flex tw-flex-col-reverse sm:tw-flex-row tw-justify-end tw-gap-2 sm:tw-gap-3">
-                <button 
-                  @click="closeDeleteModal"
-                  :disabled="deletingId !== null"
+                <button
+                  @click="closeBatchDeleteModal"
+                  :disabled="deletingAll"
                   class="tw-w-full sm:tw-w-auto tw-bg-slate-200 hover:tw-bg-slate-300 disabled:tw-opacity-50 tw-text-gray-700 tw-font-medium tw-py-2 tw-px-4 tw-rounded-lg tw-text-sm tw-transition-colors"
                 >
                   {{ $t('common.cancel') }}
                 </button>
-                <button 
-                  @click="confirmDeleteAppointment"
-                  :disabled="deletingId !== null"
+                <button
+                  @click="confirmBatchDelete"
+                  :disabled="deletingAll"
                   class="tw-w-full sm:tw-w-auto tw-bg-red-600 hover:tw-bg-red-700 disabled:tw-bg-gray-400 tw-text-white tw-font-medium tw-py-2 tw-px-5 tw-rounded-lg tw-text-sm tw-transition-colors tw-shadow-sm"
                 >
-                  {{ deletingId !== null ? $t('common.deleting') :$t('appointments.confirmDelete') }}
+                  {{ deletingAll ? $t('common.deleting') : $t('appointments.confirmDelete') }}
                 </button>
               </div>
 
@@ -414,7 +470,7 @@ import { RETENTION_DAYS } from '~/constants/appointments'
 
 // ดึงทั้ง locale และ t สำหรับเรียกแปลภาษาใน script
 const { locale, t } = useI18n()
-const { statusClass, statusLabel, formatDate, formatDateTime } = useAppointment()
+const { statusClass, statusLabel, formatDate, formatDateTime, sortBySchedule } = useAppointment()
 const { canCancel, session } = useSession()
 
 // ============================================================
@@ -424,10 +480,71 @@ const { canCancel, session } = useSession()
 const appointments = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
-const deletingId = ref(null)
 
 const activeAppointments = computed(() => {
-  return appointments.value.filter(item => item.status !== 'completed' && item.status !== 'cancelled')
+  const active = appointments.value.filter(item => item.status !== 'completed' && item.status !== 'cancelled')
+  return sortBySchedule(active)
+})
+
+// ============================================================
+// Checkbox Selection — เลือกลบทีละรายการ / ลบทั้งหมด
+// ============================================================
+
+const selectedIds = ref([])
+const deletingAll = ref(false)
+
+const allItemsSelected = computed(() =>
+  activeAppointments.value.length > 0 &&
+  activeAppointments.value.every(a => selectedIds.value.includes(a.appointment_id)),
+)
+
+const isSelected = (id) => selectedIds.value.includes(id)
+
+const toggleSelect = (item) => {
+  const idx = selectedIds.value.indexOf(item.appointment_id)
+  if (idx >= 0) selectedIds.value.splice(idx, 1)
+  else selectedIds.value.push(item.appointment_id)
+}
+
+const toggleSelectAll = () => {
+  selectedIds.value = allItemsSelected.value
+    ? []
+    : activeAppointments.value.map(a => a.appointment_id)
+}
+
+// ============================================================
+// Pagination — แสดงทีละ 10 รายการ
+// ============================================================
+
+const pageSize = 10
+const currentPage = ref(1)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(activeAppointments.value.length / pageSize)))
+
+const pagedAppointments = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return activeAppointments.value.slice(start, start + pageSize)
+})
+
+const rangeStart = computed(() =>
+  activeAppointments.value.length === 0 ? 0 : (currentPage.value - 1) * pageSize + 1,
+)
+const rangeEnd = computed(() =>
+  Math.min(currentPage.value * pageSize, activeAppointments.value.length),
+)
+
+// เลขลำดับจริงต่อเนื่องกันทุกหน้า (ไม่รีเซ็ตเป็น 1 ในแต่ละหน้า)
+const rowNumber = (index) => (currentPage.value - 1) * pageSize + index + 1
+
+const goToPage = (page) => {
+  currentPage.value = Math.min(Math.max(1, page), totalPages.value)
+}
+const prevPage = () => goToPage(currentPage.value - 1)
+const nextPage = () => goToPage(currentPage.value + 1)
+
+// ถ้าข้อมูลลดลงจนหน้าปัจจุบันเกินหน้าสุดท้าย ให้ถอยกลับ
+watch(totalPages, (max) => {
+  if (currentPage.value > max) currentPage.value = max
 })
 
 // Detail Modal State
@@ -439,9 +556,10 @@ const parkingDestination = computed(() =>
 )
 const clinicDestination = computed(() => buildClinicDestination())
 
-// Delete Confirm Modal State
-const showDeleteModal = ref(false)
-const itemToDelete = ref(null)
+// Batch Delete Confirm Modal State
+const showBatchDeleteModal = ref(false)
+const batchDeleteIds = ref([])
+const batchDeleteMode = ref('selected')
 
 // ============================================================
 // Data Fetching
@@ -453,6 +571,8 @@ const fetchAppointments = async () => {
   try {
     const data = await $fetch('/api/appointments', { method: 'GET' })
     appointments.value = data || []
+    currentPage.value = 1
+    selectedIds.value = []
   } catch (error) {
     errorMsg.value = error?.data?.statusMessage || error?.message || t('common.serverError')
     console.error('Fetch appointments error:', error)
@@ -462,41 +582,47 @@ const fetchAppointments = async () => {
 }
 
 // ============================================================
-// Delete Modal Actions
+// Batch Delete Actions — ลบที่เลือก / ลบทั้งหมด
 // ============================================================
 
-const askDeleteAppointment = (item) => {
-  itemToDelete.value = item
-  showDeleteModal.value = true
+const askBatchDelete = (ids, mode = 'selected') => {
+  if (!ids || ids.length === 0) return
+  batchDeleteIds.value = [...ids]
+  batchDeleteMode.value = mode
+  showBatchDeleteModal.value = true
 }
 
-const closeDeleteModal = () => {
-  showDeleteModal.value = false
-  itemToDelete.value = null
+const closeBatchDeleteModal = () => {
+  showBatchDeleteModal.value = false
+  batchDeleteIds.value = []
 }
 
-const confirmDeleteAppointment = async () => {
-  if (!itemToDelete.value) return
+const confirmBatchDelete = async () => {
+  if (batchDeleteIds.value.length === 0) return
 
-  const appointmentId = itemToDelete.value.appointment_id
-  deletingId.value = appointmentId
-
+  deletingAll.value = true
+  const idsToDelete = [...batchDeleteIds.value]
   try {
-    await $fetch(`/api/appointments/${appointmentId}`, { method: 'DELETE' })
+    const res = await $fetch('/api/appointments/delete-batch', {
+      method: 'POST',
+      body: { ids: idsToDelete },
+    })
+    const count = res?.count || 0
 
-    const targetItem = appointments.value.find(item => item.appointment_id === appointmentId)
-    if (targetItem) {
-      targetItem.status = 'cancelled'
-    }
+    const deletedSet = new Set(idsToDelete)
+    appointments.value = appointments.value.map(item =>
+      deletedSet.has(item.appointment_id) ? { ...item, status: 'cancelled' } : item
+    )
 
-    closeDeleteModal()
-    alert(t('appointments.deleteSuccess', { days: RETENTION_DAYS }))
+    selectedIds.value = selectedIds.value.filter(id => !deletedSet.has(id))
+    closeBatchDeleteModal()
+    alert(t('appointments.batchDeleteSuccess', { count, days: RETENTION_DAYS }))
   } catch (error) {
     const detail = error?.data?.statusMessage || error?.data?.message || error?.message || t('common.unknown')
     alert(t('appointments.deleteError') + ': ' + detail)
-    console.error('Delete error details:', { status: error?.status, statusCode: error?.statusCode, detail, full: error })
+    console.error('Batch delete error:', error)
   } finally {
-    deletingId.value = null
+    deletingAll.value = false
   }
 }
 

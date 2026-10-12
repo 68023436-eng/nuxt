@@ -47,12 +47,11 @@ export default defineEventHandler(async (event) => {
       return { success: true, message: 'รายการนี้อยู่ในประวัติแล้ว', deleted_at: (existing as any).deleted_at, retention_days: RETENTION_DAYS }
     }
 
-    // Soft-delete: เก็บ deleted_at = เวลาปัจจุบัน (ข้อมูลจะค้างในประวัติ 30 วัน แล้วถูกลบถาวรอัตโนมัติ)
-    const deleteTime = new Date().toISOString()
-    const { error: updateError } = await (client as any)
-      .from('appointments')
-      .update({ deleted_at: deleteTime, status: 'cancelled' })
-      .eq('appointment_id', numericId)
+    // Soft-delete ผ่าน stored function (set status='cancelled' + deleted_at=now)
+    const { data: rows, error: updateError } = await (client as any).rpc(
+      'set_appointment_cancelled',
+      { p_ids: [numericId] },
+    )
 
     if (updateError) {
       console.error('Server soft-delete error:', JSON.stringify(updateError))
@@ -61,6 +60,9 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'ไม่สามารถอัปเดตสถานะการลบข้อมูลได้',
       })
     }
+
+    const row = rows?.[0]
+    const deleteTime = row?.deleted_at ?? new Date().toISOString()
 
     return {
       success: true,

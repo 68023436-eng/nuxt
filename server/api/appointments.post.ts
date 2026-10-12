@@ -50,15 +50,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 3. ตรวจสอบทะเบียนรถ (ถ้าส่งมา ต้องไม่ยาวเกิน 20 ตัวอักษร)
-    //    คอลัมน์เป็น NOT NULL ใน DB — ถ้าไม่ระบุให้เก็บเป็น '' แทน null
-    let licensePlate = ''
-    if (body.license_plate) {
-      licensePlate = sanitizeString(String(body.license_plate))
-      if (licensePlate.length > 20) {
+    // 3. ตรวจสอบเบอร์โทร (ถ้าส่งมา ต้องเป็นตัวเลข 9-10 หลัก)
+    //    ถ้าไม่ส่งมา จะใช้เบอร์จากบัญชีผู้ป่วยด้านล่างแทน
+    let bodyPhone = ''
+    if (body.phone_number) {
+      bodyPhone = normalizePhone(String(body.phone_number))
+      if (!/^\d{9,10}$/.test(bodyPhone)) {
         throw createError({
           statusCode: 400,
-          statusMessage: 'ทะเบียนรถต้องไม่เกิน 20 ตัวอักษร',
+          statusMessage: 'เบอร์โทรต้องเป็นตัวเลข 9-10 หลัก',
         })
       }
     }
@@ -125,7 +125,10 @@ export default defineEventHandler(async (event) => {
     }
 
     const patientName = sanitizeString(p?.full_name)
-    const phoneNumber = p?.phone_number ? normalizePhone(p?.phone_number) : null
+    // ใช้เบอร์ที่กรอกในฟอร์มก่อน ถ้าไม่มีให้ใช้เบอร์จากบัญชีผู้ป่วย
+    // คอลัมน์ phone_number เป็น NOT NULL — fallback เป็น '' กันข้อผิดพลาด
+    const accountPhone = p?.phone_number ? normalizePhone(p?.phone_number) : ''
+    const phoneNumber = bodyPhone || accountPhone || ''
     // === สร้าง QR Token อัตโนมัติ (ใช้ crypto สำหรับความปลอดภัย) ===
     const qrToken = body.qr_token
       ? sanitizeString(String(body.qr_token))
@@ -136,7 +139,6 @@ export default defineEventHandler(async (event) => {
       user_id: patientUserId,
       patient_name: patientName,
       phone_number: phoneNumber,
-      license_plate: licensePlate,
       appointment_date: appointmentDate,
       time_slot: timeSlot,
       status,

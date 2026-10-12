@@ -32,12 +32,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // อัปเดตสถานะเป็น 'backup' (ข้อมูล backup) และล้าง deleted_at ออก เพื่อไม่ให้ถูกนับว่าถูกลบ
-    const { data: updated, error: updateError } = await (client as any)
-      .from('appointments')
-      .update({ status: 'backup', deleted_at: null })
-      .eq('appointment_id', numericId)
-      .select()
+    // กู้คืนผ่าน stored function (set status='backup' + ล้าง deleted_at)
+    const { data: rows, error: updateError } = await (client as any).rpc(
+      'restore_appointments',
+      { p_ids: [numericId] },
+    )
 
     if (updateError) {
       console.error('Server restore error:', updateError.message)
@@ -47,7 +46,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    return { success: true, message: 'กู้คืนข้อมูลสำเร็จ (สถานะ: ข้อมูล backup)', data: updated?.[0] || null }
+    return { success: true, message: 'กู้คืนข้อมูลสำเร็จ (สถานะ: ข้อมูล backup)', data: rows?.[0] || null }
   } catch (err: any) {
     if (err.statusCode) throw err
 
