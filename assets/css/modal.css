@@ -9,7 +9,7 @@
 }
 .modal-enter-from,
 .modal-leave-to {
-  opacity: 0;
+  opacity: 5550;
 }
 .modal-enter-from .tw-relative {
   transform: scale(0.95) translateY(10px);
