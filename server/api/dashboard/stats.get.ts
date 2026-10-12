@@ -3,12 +3,17 @@ import { STAFF_ROLES } from '~/constants/roles'
 import type { AccessRole } from '~/constants/roles'
 
 /**
- * GET /api/dashboard/stats?month=YYYY-MM
+ * GET /api/dashboard/stats?range=day|month&month=YYYY-MM
  * สรุปยอดสำหรับหน้า Dashboard
- * - total_visits      : จำนวนครั้งที่มาใช้บริการ (นับจาก appointment_date ในเดือนที่เลือก)
- * - total_visitors    : จำนวนผู้ใช้บริการ (ไม่ซ้ำเบอร์/ชื่อ ในเดือนที่เลือก)
+ * - range             : ช่วงเวลาที่กรอง = 'day' (วันนี้) หรือ 'month' (เดือนที่เลือก) ค่าเริ่มต้น = month
+ * - total_visits      : จำนวนครั้งที่มาใช้บริการ (นับจาก appointment_date ในช่วงที่เลือก)
+ * - total_visitors    : จำนวนผู้ใช้บริการ (ไม่ซ้ำเบอร์/ชื่อ ในช่วงที่เลือก)
  * - staff_count       : จำนวนเจ้าหน้าที่ทั้งหมด (Admin / Clinic_staff / Security_guard)
  * - top_departments   : แผนกที่คนมาใช้บริการบ่อยที่สุด (เรียงจากมากไปน้อย 10 อันดับ)
+ * - scan_summary      : สรุปการเข้าใช้บริการนับจากการสแกน QR Code และการเช็คจากเบอร์โทรศัพท์
+ *                       (นับจากตาราง scan_history ในช่วงที่เลือก)
+ * - overview          : สรุปภาพรวมเปรียบเทียบระหว่างจำนวนนัดหมาย กับ การตรวจสิทธิ์จริง
+ *                       (appointments = นัดหมายทั้งหมด, scans/qr/phone/valid/invalid = จาก scan_history)
  * เปิดให้เฉพาะ Admin / Clinic_staff (มีสิทธิ์ view ข้อมูลนัดหมายทั้งหมด)
  */
 export default defineEventHandler(async (event) => {
@@ -26,13 +31,24 @@ export default defineEventHandler(async (event) => {
 
     const client = await serverSupabaseClient(event)
 
-    // ขอบเขตเดือนที่เลือก (ค่าเริ่มต้น = เดือนนี้ตาม Asia/Bangkok)
-    const month = readMonthParam(getQuery(event).month)
+    // ช่วงเวลาที่เลือก: 'day' = วันนี้, 'month' = เดือนที่เลือก (ค่าเริ่มต้น = เดือนนี้ตาม Asia/Bangkok)
+    const query = getQuery(event)
+    const range: 'day' | 'month' = query.range === 'day' ? 'day' : 'month'
+    const month = readMonthParam(query.month)
+    const todayKey = bangkokToday()
 
-    const startKey = `${month}-01`
-    const { year, m } = parseMonth(month)
-    const nextMonth = new Date(Date.UTC(year, m, 1))
-    const endKey = bangkokDateKey(nextMonth) // 'YYYY-MM-01' ของเดือนถัดไป
+    // ขอบเขตของ appointment_date (date column รูป 'YYYY-MM-DD')
+    let startKey: string
+    let endKey: string | null
+    if (range === 'day') {
+      startKey = todayKey
+      endKey = null // ใช้วันเดียว → กรองด้วย eq
+    } else {
+      startKey = `${month}-01`
+      const { year, m } = parseMonth(month)
+      const nextMonth = new Date(Date.UTC(year, m, 1))
+      endKey = bangkokDateKey(nextMonth) // 'YYYY-MM-01' ของเดือนถัดไป
+    }
 
     // === 1) จำนวนเจ้าหน้าที่ทั้งหมด ===
     const { count: staffCount, error: staffErr } = await client
@@ -45,12 +61,15 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถดึงจำนวนเจ้าหน้าที่ได้' })
     }
 
-    // === 2) รายการนัดหมาย/การใช้บริการภายในเดือนที่เลือก ===
-    const { data: appts, error: apptErr } = await client
+    // === 2) รายการนัดหมาย/การใช้บริการภายในช่วงที่เลือก ===
+    let apptQuery = client
       .from('appointments')
       .select('patient_name, phone_number, dept_id, department:hospital_dept(dept_name_th)')
-      .gte('appointment_date', startKey)
-      .lt('appointment_date', endKey)
+    apptQuery = range === 'day'
+      ? apptQuery.eq('appointment_date', startKey)
+      : apptQuery.gte('appointment_date', startKey).lt('appointment_date', endKey as string)
+
+    const { data: appts, error: apptErr } = await apptQuery
 
     if (apptErr) {
       console.error('Dashboard appointments error:', apptErr.message)
@@ -60,7 +79,7 @@ export default defineEventHandler(async (event) => {
     // === 3) รวมสถิติในฝั่ง server ===
     const rows = appts || []
 
-    // จำนวนครั้งที่มาใช้บริการ (ทุกนัดในเดือน)
+    // จำนวนครั้งที่มาใช้บริการ (ทุกนัดในช่วงที่เลือก)
     const totalVisits = rows.length
 
     // จำนวนผู้ใช้บริการไม่ซ้ำ (ใช้คู่ชื่อ+เบอร์เป็นตัวระบุ)
@@ -85,12 +104,28 @@ export default defineEventHandler(async (event) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
 
+    // === 4) สรุปการเข้าใช้บริการนับจากการสแกน QR / เช็คเบอร์โทร (scan_history) ===
+    const scanSummary = await loadScanSummary(client, range, month)
+
+    // === 5) สรุปภาพรวมเปรียบเทียบระหว่างนัดหมาย กับ การตรวจสิทธิ์จริง ===
+    const overview = {
+      appointments: totalVisits,
+      scans: scanSummary.total,
+      qr: scanSummary.qr,
+      phone: scanSummary.phone,
+      valid: scanSummary.valid,
+      invalid: scanSummary.invalid,
+    }
+
     return {
+      range,
       month,
       total_visits: totalVisits,
       total_visitors: totalVisitors,
       staff_count: staffCount ?? 0,
       top_departments: topDepartments,
+      scan_summary: scanSummary,
+      overview,
     }
   } catch (err: any) {
     if (err.statusCode) throw err
@@ -102,6 +137,63 @@ export default defineEventHandler(async (event) => {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+interface ScanSummary {
+  total: number
+  qr: number
+  phone: number
+  valid: number
+  invalid: number
+}
+
+/**
+ * สรุปการเข้าใช้บริการจากตาราง scan_history ในช่วงที่เลือก (Asia/Bangkok)
+ * - qr      : จำนวนครั้งที่ตรวจด้วยการสแกน QR Code
+ * - phone   : จำนวนครั้งที่ตรวจด้วยการค้นหาเบอร์โทรศัพท์
+ * - valid   : จำนวนครั้งที่พบสิทธิ์ (เข้าใช้บริการได้)
+ * - invalid : จำนวนครั้งที่ไม่พบสิทธิ์
+ * ถ้าตาราง scan_history ยังไม่ถูก migrate จะคืนค่าศูนย์โดยไม่ทำให้ Dashboard ล่ม
+ */
+async function loadScanSummary(client: any, range: 'day' | 'month', month: string): Promise<ScanSummary> {
+  const summary: ScanSummary = { total: 0, qr: 0, phone: 0, valid: 0, invalid: 0 }
+
+  // ขอบเขตคอลัมน์ created_at (timestamptz) เป็น ISO string
+  let startIso: string
+  let endIso: string
+  if (range === 'day') {
+    const { start, end } = bangkokDayRangeToday()
+    startIso = start.toISOString()
+    endIso = end.toISOString()
+  } else {
+    ;({ startIso, endIso } = bangkokMonthRange(month))
+  }
+
+  const { data, error } = await client
+    .from('scan_history')
+    .select('method, result')
+    .gte('created_at', startIso)
+    .lt('created_at', endIso)
+
+  if (error) {
+    const msg = String(error.message || '')
+    if (/could not find the table|does not exist|row-level security/i.test(msg)) {
+      console.warn('Dashboard scan summary unavailable (migration not run yet):', msg)
+      return summary
+    }
+    console.error('Dashboard scan summary error:', msg)
+    throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถดึงข้อมูลสรุปการสแกนได้' })
+  }
+
+  for (const row of (data as any[]) || []) {
+    summary.total += 1
+    if (row.method === 'qr') summary.qr += 1
+    else if (row.method === 'phone') summary.phone += 1
+    if (row.result === 'valid') summary.valid += 1
+    else if (row.result === 'invalid') summary.invalid += 1
+  }
+
+  return summary
+}
 
 function parseMonth(month: string): { year: number; m: number } {
   const [yearStr, monthStr] = month.split('-')

@@ -54,7 +54,6 @@ export default defineEventHandler(async (event) => {
         qr_token,
         patient_name,
         phone_number,
-        license_plate,
         appointment_date,
         time_slot,
         status,
