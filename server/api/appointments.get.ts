@@ -1,6 +1,7 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { RETENTION_DAYS } from '~/constants/appointments'
 import type { AccessRole } from '~/constants/roles'
+import { normalizePhone } from '~/utils/name'
 
 /**
  * สถานะแสดงผลของการนัดหมาย — คำนวณจากข้อมูลจริง (ไม่เก็บใน DB)
@@ -51,6 +52,7 @@ export default defineEventHandler(async (event) => {
       .from('appointments')
       .select(`
         appointment_id,
+        user_id,
         qr_token,
         patient_name,
         phone_number,
@@ -101,6 +103,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // === ดึงชื่อ/เบอร์ผู้ป่วยล่าสุดจาก hospital_user (บัญชีจริง) ===
+    // appointments เก็บ patient_name/phone_number เป็น snapshot ตอนสร้าง
+    // ถ้าผู้ป่วยแก้ชื่อ/เบอร์ภายหลัง ให้แสดงค่าล่าสุดจากบัญชี (fallback เป็น snapshot ถ้าถูกลบ)
+    const livePatients = new Map<string, { full_name: string | null; phone_number: string | null }>()
+    const patientIds = [...new Set((data || []).map((a: any) => a.user_id).filter(Boolean))]
+    if (patientIds.length) {
+      const { data: accounts, error: accErr } = await client
+        .from('hospital_user')
+        .select('user_id, full_name, phone_number')
+        .in('user_id', patientIds)
+      if (accErr) {
+        console.warn('Load current patient names skipped:', accErr.message)
+      } else {
+        for (const a of (accounts as any[]) || []) livePatients.set(String(a.user_id), a)
+      }
+    }
+
     // === ดึงรายการที่เคย "สแกนผ่าน" (ใช้สิทธิแล้ว) จาก scan_history ===
     // appointment_id ใน scan_history เป็น text (อาจมี '50' หรือ 'null') → ทำ Set เทียบกับ id ของนัด
     const usedAppointmentIds = new Set<string>()
@@ -126,15 +145,21 @@ export default defineEventHandler(async (event) => {
 
     // แปลงผล embed ให้เป็นฟิลด์ตรงๆ ที่หน้าเว็บใช้ (department_name, building_name)
     // พร้อมกรองรายการที่ deleted_at เกิน 30 วันออก (ข้อมูลถูกลบถาวรแล้ว)
-    const filtered = (data || []).map((item: any) => ({
-      ...item,
-      department_name: (getCookie(event, 'hc_locale') === 'en'
-        ? (item.department?.dept_name_en || item.department?.[0]?.dept_name_en)
-        : (item.department?.dept_name_th || item.department?.[0]?.dept_name_th)) || null,
-      building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
-      department: undefined,
-      location: undefined,
-    })).filter((item: any) => {
+    const filtered = (data || []).map((item: any) => {
+      const live = item.user_id ? livePatients.get(String(item.user_id)) : undefined
+      const livePhone = live?.phone_number ? normalizePhone(live.phone_number) : ''
+      return {
+        ...item,
+        patient_name: live?.full_name || item.patient_name,
+        phone_number: livePhone || item.phone_number,
+        department_name: (getCookie(event, 'hc_locale') === 'en'
+          ? (item.department?.dept_name_en || item.department?.[0]?.dept_name_en)
+          : (item.department?.dept_name_th || item.department?.[0]?.dept_name_th)) || null,
+        building_name: item.location?.building_name || item.location?.[0]?.building_name || null,
+        department: undefined,
+        location: undefined,
+      }
+    }).filter((item: any) => {
       if (!item.deleted_at) return true
       const deletedTime = new Date(item.deleted_at).getTime()
       return now - deletedTime < RETENTION_MS

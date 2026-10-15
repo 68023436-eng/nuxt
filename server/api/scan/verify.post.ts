@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
     if (method === 'qr') {
       const { data, error } = await (client as any)
         .from('appointments')
-        .select('appointment_id, patient_name, phone_number, appointment_date, status')
+        .select('appointment_id, user_id, patient_name, phone_number, appointment_date, status')
         .eq('qr_token', qrToken)
         .in('status', validStatuses)
         .maybeSingle()
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
     } else {
       const { data, error } = await (client as any)
         .from('appointments')
-        .select('appointment_id, patient_name, phone_number, appointment_date, status')
+        .select('appointment_id, user_id, patient_name, phone_number, appointment_date, status')
         .eq('phone_number', phoneNumber)
         .in('status', validStatuses)
         .limit(20)
@@ -94,10 +94,26 @@ export default defineEventHandler(async (event) => {
       isTodayMatch: !!todaysRecord
     })
 
+    // === ดึงข้อมูลผู้ป่วยล่าสุดจาก hospital_user (ถ้ามี user_id) ===
+    // ใช้ชื่อ/เบอร์ล่าสุดแทน snapshot ที่เก็บใน appointments
+    let patientName = foundRecord?.patient_name ?? null
+    let patientPhone = foundRecord?.phone_number ?? null
+    if (foundRecord?.user_id) {
+      const { data: acct, error: acctErr } = await (client as any)
+        .from('hospital_user')
+        .select('full_name, phone_number')
+        .eq('user_id', foundRecord.user_id)
+        .maybeSingle()
+      if (!acctErr && acct) {
+        patientName = acct.full_name ?? patientName
+        patientPhone = acct.phone_number ?? patientPhone
+      }
+    }
+
     const found = !!todaysRecord
-    const phoneToLog = method === 'phone'
-      ? phoneNumber
-      : (foundRecord?.phone_number ?? null)
+    const phoneToLog = foundRecord
+      ? (patientPhone ?? phoneNumber ?? null)
+      : (method === 'phone' ? phoneNumber : null)
 
     const result = found ? 'valid' : 'invalid'
 
@@ -123,7 +139,7 @@ export default defineEventHandler(async (event) => {
         p_method: method,
         p_qr_token: qrToken,
         p_phone_number: phoneToLog,
-        p_patient_name: foundRecord?.patient_name ?? null,
+        p_patient_name: patientName,
         p_appointment_id: foundRecord?.appointment_id != null ? Number(foundRecord.appointment_id) : null,
         p_result: result,
         p_checked_by: identity,
@@ -147,7 +163,7 @@ export default defineEventHandler(async (event) => {
             method,
             qr_token: qrToken,
             phone_number: phoneToLog,
-            patient_name: foundRecord?.patient_name ?? null,
+            patient_name: patientName,
             appointment_id: foundRecord?.appointment_id != null ? Number(foundRecord.appointment_id) : null,
             result,
             checked_by: identity,

@@ -3,6 +3,7 @@ import { ROLE_LABELS, STAFF_ROLES } from '~/constants/roles'
 import type { AccessRole } from '~/constants/roles'
 import { collapseSpaces, normalizePhone } from '~/utils/name'
 import { normalizeRoles, setAccessSession } from '~/server/utils/access'
+import { fetchAccountRoles } from '~/server/utils/userRoles'
 
 /**
  * PUT /api/admin/staff/:id
@@ -57,7 +58,7 @@ export default defineEventHandler(async (event) => {
     // ดึงข้อมูลเดิมก่อน (ตรวจว่ามีอยู่จริง + เทียบกับบัญชีตัวเอง)
     const { data: existing, error: findErr } = await client
       .from('hospital_user')
-      .select('user_id, full_name, role, roles, email')
+      .select('user_id, full_name, email')
       .eq('user_id', id)
       .maybeSingle()
 
@@ -74,7 +75,7 @@ export default defineEventHandler(async (event) => {
 
     if (isSelf) {
       // แก้ไขตัวเอง: ต้องไม่เปลี่ยนบทบาท + ห้ามปิดใช้บัญชีตัวเอง
-      const currentRoles = normalizeRoles(target?.roles ?? target?.role, STAFF_ROLES)
+      const currentRoles = normalizeRoles(await fetchAccountRoles(client, id), STAFF_ROLES)
       if (JSON.stringify(currentRoles) !== JSON.stringify(roles)) {
         throw createError({ statusCode: 403, statusMessage: 'ไม่สามารถแก้ไขบทบาทของตัวเองได้' })
       }
@@ -83,7 +84,7 @@ export default defineEventHandler(async (event) => {
       }
     } else {
       // กันชื่อซ้ำ (ถ้าชื่อ/บทบาทเปลี่ยนไป ต้องไม่ชนกับคนอื่น)
-      if (fullName !== target?.full_name || JSON.stringify(normalizeRoles(target?.roles ?? target?.role, STAFF_ROLES)) !== JSON.stringify(roles)) {
+      if (fullName !== target?.full_name || JSON.stringify(normalizeRoles(await fetchAccountRoles(client, id), STAFF_ROLES)) !== JSON.stringify(roles)) {
         const checks = await Promise.all(
           roles.map((r) =>
             client
@@ -128,8 +129,6 @@ export default defineEventHandler(async (event) => {
     // 2) อัปเดต hospital_user (ปกติ PrimaryRole จะไม่เปลี่ยนตอนแก้ไขตัวเอง)
     const updateData: Record<string, any> = {
       full_name: fullName,
-      role: primaryRole,
-      roles,
       phone_number: phoneNumber ? normalizePhone(phoneNumber) : null,
       email: email || null,
       is_active: isActive,
@@ -139,7 +138,7 @@ export default defineEventHandler(async (event) => {
       .from('hospital_user')
       .update(updateData)
       .eq('user_id', id)
-      .select('user_id, full_name, role, roles, phone_number, email, is_active')
+      .select('user_id, full_name, phone_number, email, is_active')
       .single()
 
     if (error) {
@@ -147,19 +146,45 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถแก้ไขเจ้าหน้าที่ได้' })
     }
 
+    // อัปเดตบทบาท: ถ้าไม่ใช่ตัวเองและบทบาทเปลี่ยน ให้ reset user_role
+    if (!isSelf) {
+      await (serviceClient as any).from('user_role').delete().eq('user_id', id)
+      const { error: roleErr } = await (serviceClient as any)
+        .from('user_role')
+        .insert((roles as AccessRole[]).map((r) => ({
+          user_id: id,
+          role_code: r === 'Admin' ? 'ADMIN' : r === 'Clinic_staff' ? 'CLINIC_STAFF' : 'SECURITY_GUARD',
+          is_primary: r === primaryRole,
+        })))
+      if (roleErr) {
+        console.error('Update staff roles error:', roleErr.message)
+        throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถแก้ไขเจ้าหน้าที่ได้' })
+      }
+    }
+
+    const latestRoles = isSelf ? await fetchAccountRoles(client, id) : (roles as AccessRole[])
+    const primaryLatest = (latestRoles.length ? latestRoles[0] : adminSession.role) as AccessRole
     // ถ้าแก้ไขข้อมูลของตัวเองให้ update cookie session ทันที (ชื่อ/เบอร์เปลี่ยน)
     if (isSelf && adminSession) {
       setAccessSession(event, {
         full_name: data.full_name || adminSession.full_name,
         phone_number: data.phone_number || adminSession.phone_number,
-        role: (data.roles && Array.isArray(data.roles) && data.roles.length ? data.roles[0] : data.role || adminSession.role) as AccessRole,
-        roles: (Array.isArray(data.roles) && data.roles.length ? data.roles : [data.role || adminSession.role]) as AccessRole[],
+        role: primaryLatest,
+        roles: (latestRoles.length ? latestRoles : [primaryLatest]) as AccessRole[],
         user_id: adminSession.user_id,
         iat: Math.floor(Date.now() / 1000),
       })
     }
 
-    return data
+    return {
+      user_id: data.user_id,
+      full_name: data.full_name,
+      role: primaryRole,
+      roles: (isSelf ? latestRoles : (roles as AccessRole[])),
+      phone_number: data.phone_number,
+      email: data.email,
+      is_active: data.is_active,
+    }
   } catch (err: any) {
     if (err.statusCode) throw err
     throw createError({ statusCode: 500, statusMessage: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' })

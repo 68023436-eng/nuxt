@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: existing, error: findErr } = await client
       .from('hospital_user')
-      .select('user_id, full_name, role')
+      .select('user_id, full_name')
       .eq('user_id', id)
       .maybeSingle()
 

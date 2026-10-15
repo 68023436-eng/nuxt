@@ -1,6 +1,7 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { unionPermissions } from '~/constants/roles'
 import { collapseSpaces, composeFullName, normalizeNameForMatch, normalizePhone } from '~/utils/name'
+import { fetchAccountRoles } from '~/server/utils/userRoles'
 
 /**
  * POST /api/session
@@ -43,7 +44,7 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const { data: users, error: userErr } = await client
       .from('hospital_user')
-      .select('user_id, full_name, role, roles, phone_number, is_active')
+      .select('user_id, full_name, phone_number, is_active')
 
     if (userErr) {
       console.error('Hospital user lookup error:', userErr.message)
@@ -82,15 +83,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!isAccessRole(byPhone.role)) {
+    // ดึงบทบาททั้งหมดของบัญชี (รองรับทั้ง schema เก่า role/roles และ schema ใหม่ user_role)
+    const accountRoles = byPhone.user_id
+      ? await fetchAccountRoles(client, String(byPhone.user_id))
+      : []
+
+    if (!accountRoles.length) {
       throw createError({ statusCode: 500, statusMessage: 'บทบาทของบัญชีไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่' })
     }
 
-    // บทบาททั้งหมดของบัญชี (1 user มีได้หลาย role) — primary = role (roles[0])
-    const roles: AccessRole[] = Array.isArray(byPhone.roles) && byPhone.roles.length
-      ? byPhone.roles.filter(isAccessRole)
-      : [byPhone.role]
-    const primaryRole = (roles[0] as AccessRole) || byPhone.role
+    const primaryRole = accountRoles[0]
+    const roles = accountRoles
 
     // เข้าใช้งานด้วย role + ชื่อของบัญชีที่ตรงกัน (ไม่ใช้ข้อมูลที่กรอกมา)
     const session: AccessSession = {

@@ -11,10 +11,25 @@ export default defineEventHandler(async (event) => {
     requirePermission(event, 'create')
 
     const client = await serverSupabaseClient(event)
+
+    // ดึง user_id ที่มีบทบาท Patient (รองรับ schema ใหม่ user_role)
+    const { data: roleRows, error: roleErr } = await client
+      .from('user_role')
+      .select('user_id')
+      .eq('role_code', 'PATIENT')
+
+    if (roleErr) {
+      console.error('Fetch patient roles error:', roleErr.message)
+      throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถดึงข้อมูลบัญชีผู้ป่วยได้' })
+    }
+
+    const ids = [...new Set((roleRows as any[] || []).map((r) => r.user_id).filter(Boolean))]
+    if (!ids.length) return []
+
     const { data, error } = await client
       .from('hospital_user')
       .select('user_id, full_name, phone_number, is_active')
-      .eq('role', 'Patient')
+      .in('user_id', ids)
       .order('full_name', { ascending: true })
 
     if (error) {

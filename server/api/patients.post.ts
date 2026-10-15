@@ -73,20 +73,16 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถสร้างบัญชีผู้ใช้ได้ กรุณาลองใหม่' })
     }
 
-    // --- 2) Insert hospital_user role='Patient' (ไม่เก็บ password) ---
-    const { data, error } = await (serviceClient as any)
+    // --- 2) Insert hospital_user (ไม่เก็บ role/roles — บทบาทเก็บใน user_role) ---
+    const { error } = await (serviceClient as any)
       .from('hospital_user')
       .insert({
         user_id: authData.user.id,
         full_name: fullName,
-        role: 'Patient',
-        roles: ['Patient'],
         phone_number: phoneNumber,
         email: fakeEmail,
         is_active: true,
       })
-      .select('user_id, full_name, role, roles, phone_number, is_active')
-      .single()
 
     if (error) {
       await serviceClient.auth.admin.deleteUser(authData.user.id).catch(() => {})
@@ -94,7 +90,26 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถเพิ่มบัญชีผู้ป่วยได้' })
     }
 
-    return data
+    // --- 3) ผูกบทบาท Patient ใน user_role ---
+    const { error: roleErr } = await (serviceClient as any)
+      .from('user_role')
+      .insert({ user_id: authData.user.id, role_code: 'PATIENT', is_primary: true })
+
+    if (roleErr) {
+      await serviceClient.auth.admin.deleteUser(authData.user.id).catch(() => {})
+      await (serviceClient as any).from('hospital_user').delete().eq('user_id', authData.user.id)
+      console.error('Insert patient role error:', roleErr.message)
+      throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถเพิ่มบัญชีผู้ป่วยได้' })
+    }
+
+    return {
+      user_id: authData.user.id,
+      full_name: fullName,
+      role: 'Patient',
+      roles: ['Patient'],
+      phone_number: phoneNumber,
+      is_active: true,
+    }
   } catch (err: any) {
     if (err.statusCode) throw err
     throw createError({ statusCode: 500, statusMessage: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' })

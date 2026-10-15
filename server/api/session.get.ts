@@ -2,7 +2,8 @@ import { serverSupabaseClient } from '#supabase/server'
 
 import { unionPermissions } from '~/constants/roles'
 import type { AccessRole } from '~/constants/roles'
-import { clearAccessSession, isAccessRole, setAccessSession } from '~/server/utils/access'
+import { clearAccessSession, setAccessSession } from '~/server/utils/access'
+import { fetchAccountRoles } from '~/server/utils/userRoles'
 
 /**
  * GET /api/session
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
       .from('hospital_user')
-      .select('user_id, full_name, phone_number, role, roles, is_active')
+      .select('user_id, full_name, phone_number, is_active')
       .eq('user_id', session.user_id)
       .maybeSingle()
 
@@ -38,18 +39,13 @@ export default defineEventHandler(async (event) => {
         return { session: null }
       }
 
-      const dbRoles = (
-        Array.isArray(row.roles) && row.roles.length
-          ? row.roles.filter(isAccessRole)
-          : isAccessRole(row.role)
-            ? [row.role]
-            : []
-      ) as AccessRole[]
-      const primaryRole = (dbRoles[0] as AccessRole) || (isAccessRole(row.role) ? row.role : session.role)
+      const dbRoles = await fetchAccountRoles(client, String(session.user_id))
+      const resolvedRoles: AccessRole[] = dbRoles.length ? dbRoles : session.roles || [session.role]
+      const primaryRole = resolvedRoles[0] as AccessRole
 
       const canon = (roles: AccessRole[]) => [...roles].sort().join(',')
       const changed =
-        canon(dbRoles) !== canon(current.roles || [current.role]) ||
+        canon(resolvedRoles) !== canon(current.roles || [current.role]) ||
         primaryRole !== current.role ||
         (row.full_name || null) !== (current.full_name || null) ||
         (row.phone_number || null) !== (current.phone_number || null)
@@ -59,7 +55,7 @@ export default defineEventHandler(async (event) => {
           full_name: row.full_name || current.full_name,
           phone_number: row.phone_number || current.phone_number || '',
           role: primaryRole,
-          roles: dbRoles.length ? dbRoles : [primaryRole],
+          roles: resolvedRoles.length ? resolvedRoles : [primaryRole],
           user_id: session.user_id,
           iat: Math.floor(Date.now() / 1000),
         }
