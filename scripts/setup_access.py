@@ -27,6 +27,12 @@ PLANS = {
         ("hospital_user_update", "UPDATE", "true", "true"),
         ("hospital_user_delete", "DELETE", "true", None),
     ],
+    "user_role": [
+        ("user_role_readable", "SELECT", "true", None),
+    ],
+    "app_role": [
+        ("app_role_readable", "SELECT", "true", None),
+    ],
     "hospital_dept": [
         ("hospital_dept_readable", "SELECT", "true", None),
     ],

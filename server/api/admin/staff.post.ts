@@ -3,6 +3,7 @@ import { ROLE_LABELS, STAFF_ROLES } from '~/constants/roles'
 import type { AccessRole } from '~/constants/roles'
 import { collapseSpaces } from '~/utils/name'
 import { normalizeRoles } from '~/server/utils/access'
+import { fetchAccountRoles } from '~/server/utils/userRoles'
 
 /**
  * POST /api/admin/staff
@@ -51,28 +52,30 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const serviceClient = await serverSupabaseServiceRole(event)
 
-    // กันชื่อซ้ำ (ถ้ามีบัญชีเจ้าหน้าที่อื่นชื่อเดียวกันกับบทบาทที่จะให้)
-    const checks = await Promise.all(
-      roles.map((r) =>
-        client
-          .from('hospital_user')
-          .select('user_id')
-          .eq('full_name', fullName)
-          .contains('roles', [r])
-          .maybeSingle()
-      )
-    )
-    const dupErrRaw = checks.find((c) => c.error)
-    if (dupErrRaw?.error) {
-      console.error('Check duplicate staff error:', dupErrRaw.error.message)
+    // กันชื่อซ้ำ (ตรวจสอบบทบาทที่ซ้ำกัน)
+    const { data: candidates, error: candErr } = await client
+      .from('hospital_user')
+      .select('user_id')
+      .eq('full_name', fullName)
+
+    if (candErr) {
+      console.error('Check duplicate staff error:', candErr.message)
       throw createError({ statusCode: 500, statusMessage: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล' })
     }
-    const dupRole = roles.find((r, i) => checks[i].data)
-    if (dupRole) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: `มีผู้ใช้ "ชื่อ ${fullName} (${ROLE_LABELS[dupRole]})" นี้อยู่แล้วในระบบ`,
-      })
+
+    if (candidates && candidates.length) {
+      const existingRoles = (
+        await Promise.all(
+          (candidates as any[]).map((cand) => fetchAccountRoles(client, String(cand.user_id)))
+        )
+      ).flat()
+      const dupRole = roles.find((r) => existingRoles.includes(r as AccessRole))
+      if (dupRole) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: `มีผู้ใช้ "ชื่อ ${fullName} (${ROLE_LABELS[dupRole]})" นี้อยู่แล้วในระบบ`,
+        })
+      }
     }
 
     // 1) สร้าง auth user ใน Supabase Auth
@@ -88,29 +91,48 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถสร้างบัญชีผู้ใช้ได้ (อีเมลอาจซ้ำกับบัญชีในระบบ)' })
     }
 
-    // 2) เพิ่มข้อมูล staff ลง hospital_user (user_id = auth user id)
-    const { data, error } = await client
+    // 2) เพิ่มข้อมูล staff ลง hospital_user (ไม่มี role/roles columns)
+    const { error } = await (serviceClient as any)
       .from('hospital_user')
       .insert({
         user_id: authData.user.id,
         full_name: fullName,
-        role: primaryRole,
-        roles,
         phone_number: phoneNumber || null,
         email,
         is_active: isActive,
-      } as any)
-      .select('user_id, full_name, role, roles, phone_number, email, is_active')
-      .single()
+      })
 
     if (error) {
-      // ถ้า insert hospital_user ไม่สำเร็จ ให้ลบ auth user ที่สร้างไปคืน (rollback)
       await serviceClient.auth.admin.deleteUser(authData.user.id).catch(() => {})
       console.error('Insert staff error:', error.message)
       throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถเพิ่มเจ้าหน้าที่ได้' })
     }
 
-    return data
+    // 3) ผูกบทบาทใน user_role
+    const { error: roleErr } = await (serviceClient as any)
+      .from('user_role')
+      .insert(roles.map((r: AccessRole) => ({
+        user_id: authData.user.id,
+        role_code: r === 'Admin' ? 'ADMIN' : r === 'Clinic_staff' ? 'CLINIC_STAFF' : 'SECURITY_GUARD',
+        is_primary: r === primaryRole,
+      })))
+
+    if (roleErr) {
+      await serviceClient.auth.admin.deleteUser(authData.user.id).catch(() => {})
+      await (serviceClient as any).from('hospital_user').delete().eq('user_id', authData.user.id)
+      console.error('Insert staff roles error:', roleErr.message)
+      throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถเพิ่มเจ้าหน้าที่ได้' })
+    }
+
+    return {
+      user_id: authData.user.id,
+      full_name: fullName,
+      role: primaryRole,
+      roles,
+      phone_number: phoneNumber || null,
+      email,
+      is_active: isActive,
+    }
   } catch (err: any) {
     if (err.statusCode) throw err
     throw createError({ statusCode: 500, statusMessage: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' })

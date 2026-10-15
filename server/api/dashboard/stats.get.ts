@@ -51,14 +51,23 @@ export default defineEventHandler(async (event) => {
     }
 
     // === 1) จำนวนเจ้าหน้าที่ทั้งหมด ===
-    const { count: staffCount, error: staffErr } = await client
-      .from('hospital_user')
-      .select('user_id', { count: 'exact', head: true })
-      .in('role', STAFF_ROLES)
-      .or('is_active.is.null,is_active.eq.true')
+    const { data: staffRoles, error: staffErr } = await client
+      .from('user_role')
+      .select('user_id, role_code')
     if (staffErr) {
       console.error('Dashboard staff count error:', staffErr.message)
       throw createError({ statusCode: 500, statusMessage: 'ไม่สามารถดึงจำนวนเจ้าหน้าที่ได้' })
+    }
+    const staffRoleSet = new Set(['ADMIN','CLINIC_STAFF','SECURITY_GUARD'])
+    const staffIds = [...new Set((staffRoles as any[] || []).filter((r) => staffRoleSet.has(String(r.role_code))).map((r) => r.user_id))]
+    let staffCount = staffIds.length
+    if (staffIds.length) {
+      const { data: activeStaff } = await client
+        .from('hospital_user')
+        .select('user_id')
+        .in('user_id', staffIds)
+        .or('is_active.is.null,is_active.eq.true')
+      staffCount = (activeStaff || []).length
     }
 
     // === 2) รายการนัดหมาย/การใช้บริการภายในช่วงที่เลือก ===

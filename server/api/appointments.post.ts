@@ -1,6 +1,7 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { ALLOWED_TIME_SLOTS } from '~/constants/appointments'
 import { normalizePhone } from '~/utils/name'
+import { fetchAccountRoles } from '~/server/utils/userRoles'
 
 /** ฟังก์ชัน sanitize ข้อความป้องกัน XSS */
 function sanitizeString(str: string): string {
@@ -103,13 +104,13 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const { data: patient, error: patientErr } = await client
       .from('hospital_user')
-      .select('user_id, full_name, phone_number, role, roles, is_active')
+      .select('user_id, full_name, phone_number, is_active')
       .eq('user_id', patientUserId)
       .single()
 
     const p = patient as any
 
-    const pRoles: string[] = Array.isArray(p?.roles) && p.roles.length ? p.roles : [p?.role].filter(Boolean)
+    const pRoles = patient?.user_id ? await fetchAccountRoles(client, String(patient.user_id)) : []
     if (!pRoles.includes('Patient')) {
       throw createError({
         statusCode: 400,

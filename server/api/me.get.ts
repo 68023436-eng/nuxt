@@ -1,4 +1,5 @@
 import { serverSupabaseClient } from '#supabase/server'
+import { fetchAccountRoles } from '~/server/utils/userRoles'
 
 /**
  * GET /api/me
@@ -15,7 +16,7 @@ export default defineEventHandler(async (event) => {
     const client = await serverSupabaseClient(event)
     const { data, error } = await client
       .from('hospital_user')
-      .select('user_id, full_name, phone_number, email, role, roles, is_active')
+      .select('user_id, full_name, phone_number, email, is_active')
       .eq('user_id', session.user_id)
       .maybeSingle()
 
@@ -27,7 +28,12 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'ไม่พบบัญชีของคุณในระบบ' })
     }
 
-    return data
+    const roles = await fetchAccountRoles(client, String(session.user_id))
+    return {
+      ...data,
+      role: (roles[0] as any) || session.role,
+      roles,
+    }
   } catch (err: any) {
     if (err.statusCode) throw err
     throw createError({ statusCode: 500, statusMessage: 'เกิดข้อผิดพลาดที่เซิร์ฟเวอร์' })
